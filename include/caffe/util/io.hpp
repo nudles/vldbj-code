@@ -89,6 +89,11 @@ inline void WriteProtoToBinaryFile(
   WriteProtoToBinaryFile(proto, filename.c_str());
 }
 
+/*
+bool ReadImageToNuswideDatum(const string& filename, const int height,
+    const int width, const bool is_color, NuswideDatum* datum);
+*/
+
 bool ReadImageToDatum(const string& filename, const int label,
     const int height, const int width, const bool is_color, Datum* datum);
 
