@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <string>
 #include <vector>
-
 #include "caffe/net.hpp"
 #include "caffe/proto/caffe.pb.h"
 #include "caffe/solver.hpp"
@@ -261,19 +260,19 @@ void Solver<Dtype>::Test(const int test_net_id) {
   const shared_ptr<Net<Dtype> >& test_net = test_nets_[test_net_id];
   Dtype loss = 0;
   Dtype* label=NULL;
-  Dtyp** dbs=NULL;
-  dbs=new (Dtype*)[extract_feature_blob_names_.size()];
+  Dtype** dbs=NULL;
+  dbs=new Dtype*[extract_feature_blob_names_.size()];
 
   shared_ptr<Blob<Dtype> > label_blob=test_net->blob_by_name("label");
   int total_batches=label_blob->num()*param_.test_iter(test_net_id);
-  if(searcher_==NULL&&label==NULL){
+  if(searcher_==NULL){
     label=new Dtype[total_batches*label_blob->count()];
   }
 
   vector<shared_ptr<Blob<Dtype> > > blobs;
   for(int i=0;i<extract_feature_blob_names_.size();i++){
     blobs.push_back(test_net->blob_by_name(extract_feature_blob_names_[i]));
-    dbs[i]=new Dtyp[total_batches*blobs.back()->count()];
+    dbs[i]=new Dtype[total_batches*blobs.back()->count()];
   }
   for (int i = 0; i < param_.test_iter(test_net_id); ++i) {
     Dtype iter_loss;
@@ -309,13 +308,15 @@ void Solver<Dtype>::Test(const int test_net_id) {
       memcpy(dbs[k]+i*count, blobs[k]->cpu_data(), count*sizeof(Dtype));
     }
   }
+  if(searcher_==NULL)
+    searcher_=new evaluator::Searcher<Dtype>();
   char perf[2048];
-  int label_dim=label->count()/label->num();
+  int label_dim=label_blob->count()/label_blob->num();
   for(int k=0;k<extract_feature_blob_names_.size();k++){
     searcher_->Search(dbs[k], total_batches*blobs[k]->num(),
         blobs[k]->count()/blobs[k]->num(),num_queries_,label,label_dim);
     sprintf(perf+strlen(perf),"\nMAP feature from blob %s is %.4f",
-        extract_feature_blob_names_[i], searcher_->GetMAP();
+        extract_feature_blob_names_[k].c_str(), searcher_->GetMAP());
   }
   LOG(ERROR)<<perf;
 

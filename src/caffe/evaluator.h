@@ -19,6 +19,7 @@ typedef enum {
 /**
  * Evaluate search performance.
  */
+template<typename T>
 class Searcher{
  /**
   * GTest class to access protected or private members and functions.
@@ -41,18 +42,18 @@ class Searcher{
    * @param label label matrix for all db points
    */
   explicit Searcher(int num_queries, int num_points,
-                    int label_dim, float* label);
+                    int label_dim, T* label);
   /**
    * Search against db points.
    * This function just calc distances, between each query and db point.
-   * \copydetails Searcher::Searcher(int, int, int, int, float*);
+   * \copydetails Searcher::Searcher(int, int, int, int, T*);
    */
-  void Search(float* db, int num_points, int point_dim,
-      int num_queries, float* label,  int label_dim, Metric metric=kCosine);
+  void Search(T* db, int num_points, int point_dim,
+      int num_queries, T* label,  int label_dim, Metric metric=kCosine);
   /**
-   * \copybrief Search(float*, int, int, int, float*, int, Metric);
+   * \copybrief Search(T*, int, int, int, T*, int, Metric);
    */
-  void Search(float* db, int point_dim, Metric metric=kCosine);
+  void Search(T* db, int point_dim, Metric metric=kCosine);
   /**
    * Calc MAP of the last search.
    * @param topk consider only topk results,0 for all results.
@@ -75,20 +76,34 @@ class Searcher{
   void GenQueryIDs(int num_queries,int num_points);
   /**
    * Create ground truth matrix and calc relevant points for each query.
-   * \copydetails Searcher::Searcher(int,int, int, int, float*);
+   * \copydetails Searcher::Searcher(int,int, int, int, T*);
    */
   void SetupGroundTruth(int num_queries, int num_points,
-            int label_dim,float *label);
+            int label_dim, T *label);
   /**
    * Create ground truth matrix, where element at position (i,j) is 1 if i-th
    * query and j-th point share at least one same label.
    */
-  float* CreateGroundTruthMatrix(const std::vector<int>& query_id, float* label,
+  T* CreateGroundTruthMatrix(const std::vector<int>& query_id, T* label,
                               int num_points, int label_dim);
   /**
    * Sum each row of a matrix.
    */
-  float* SumRow(float* mat, int nrow, int ncol);
+  T* SumRow(T* mat, int nrow, int ncol);
+
+  T myblas_nrm2(const int N, const T *X, const int incX);
+  CBLAS_INDEX myblas_iamax(const int N, const T  *X, const int incX);
+  void myblas_gemm(const enum CBLAS_ORDER Order,
+                   const enum CBLAS_TRANSPOSE TransA,
+                   const enum CBLAS_TRANSPOSE TransB, const int M, const int N,
+                   const int K, const T alpha, const T *A,
+                   const int lda, const T *B, const int ldb,
+                   const T beta, T *C, const int ldc);
+  void myblas_gemv(const enum CBLAS_ORDER order,
+                 const enum CBLAS_TRANSPOSE TransA, const int M, const int N,
+                 const T alpha, const T *A, const int lda,
+                 const T *X, const int incX, const T beta,
+                 T *Y, const int incY);
 
  protected:
   //! query ids to extrac query points from db points
@@ -96,17 +111,17 @@ class Searcher{
   //! num of queries
   int num_queries_;
   //! query points
-  float * query_;
+  T * query_;
   //! point dimension
   int point_dim_;
   //! distance from query points to db points
-  float * distance_;
+  T * distance_;
   //! num of points in db
   int num_points_;
   //! ground truth matrix one row for one query point
-  float * gndmat_;
+  T * gndmat_;
   //! num of relevant points to each query point
-  float * num_relevant_;
+  T * num_relevant_;
 };
 
 }

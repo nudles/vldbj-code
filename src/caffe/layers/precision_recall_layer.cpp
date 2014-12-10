@@ -14,19 +14,6 @@ template <typename Dtype>
 void PrecisionRecallLayer<Dtype>::LayerSetUp(
   const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
   top_k_ = this->layer_param_.pr_param().top_k();
-  reps_folder_ = this->layer_param_.pr_param().reps_folder();
-  test_interval_=this->layer_param_.pr_param().test_interval();
-  train_iter_=this->layer_param_.pr_param().train_iter();;
-  mkdir(reps_folder_.c_str(), 0744);
-  // check last reps file
-  if(train_iter_>0){
-    char filename[256];
-    sprintf(filename, "%s_%04d", reps_folder_, train_iter_-1);
-    ifstream fin(filename);
-    if(!fin.is_open())
-      LOG(ERROR)<<"Cannot find the previous reps file"<<filename;
-    fin.close();
-  }
 }
 
 template <typename Dtype>
@@ -67,7 +54,7 @@ void PrecisionRecallLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom
     std::sort(bottom_data_vector.begin(), bottom_data_vector.begin()+top_k_);
 
     // check if true label is in top k predictions
-    for(int j=0;label[label_dim*i+j]!=-1;j++){
+    for(int j=0;bottom_label[label_dim*i+j]!=-1&&j<label_dim;j++){
       int label=static_cast<int>(bottom_label[label_dim*i+j]);
       for (int k = 0; k < top_k_; k++) {
         if (bottom_data_vector[k].second == label)

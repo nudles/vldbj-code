@@ -219,6 +219,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return new InfogainLossLayer<Dtype>(param);
   case LayerParameter_LayerType_INNER_PRODUCT:
     return new InnerProductLayer<Dtype>(param);
+  case LayerParameter_LayerType_NUSWIDE_DATA:
+    return new NuswideDataLayer<Dtype>(param);
   case LayerParameter_LayerType_LRN:
     return new LRNLayer<Dtype>(param);
   case LayerParameter_LayerType_MEMORY_DATA:
@@ -231,6 +233,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return GetPoolingLayer<Dtype>(name, param);
   case LayerParameter_LayerType_POWER:
     return new PowerLayer<Dtype>(param);
+  case LayerParameter_LayerType_PRECISION_RECALL:
+    return new PrecisionRecallLayer<Dtype>(param);
   case LayerParameter_LayerType_RELU:
     return GetReLULayer<Dtype>(name, param);
   case LayerParameter_LayerType_SILENCE:
@@ -245,6 +249,8 @@ Layer<Dtype>* GetLayer(const LayerParameter& param) {
     return GetSoftmaxLayer<Dtype>(name, param);
   case LayerParameter_LayerType_SOFTMAX_LOSS:
     return new SoftmaxWithLossLayer<Dtype>(param);
+  case LayerParameter_LayerType_SOFTMAX_MULTILABEL_LOSS:
+    return new SoftmaxMultiLabelLossLayer<Dtype>(param);
   case LayerParameter_LayerType_SPLIT:
     return new SplitLayer<Dtype>(param);
   case LayerParameter_LayerType_TANH:

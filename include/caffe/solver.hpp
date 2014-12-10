@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "caffe/evaluator.h"
 #include "caffe/net.hpp"
 
 namespace caffe {
@@ -62,7 +63,7 @@ class Solver {
   DISABLE_COPY_AND_ASSIGN(Solver);
 
   // added by wangwei
-  evaluator::Searcher *searcher_;
+  evaluator::Searcher<Dtype> *searcher_;
   vector<string> extract_feature_blob_names_;
   int num_queries_;
 };

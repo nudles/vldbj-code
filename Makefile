@@ -337,7 +337,7 @@ SUPERCLEAN_EXTS := .so .a .o .bin .testbin .pb.cc .pb.h _pb2.py .cuo
 	py mat py$(PROJECT) mat$(PROJECT) proto runtest \
 	superclean supercleanlist supercleanfiles warn everything
 
-all: $(NAME) $(STATIC_NAME) tools examples
+all: $(NAME) $(STATIC_NAME)  tools examples
 
 everything: all py$(PROJECT) mat$(PROJECT) test warn lint runtest
 
@@ -443,11 +443,11 @@ $(ALL_BUILD_DIRS): | $(BUILD_DIR_LINK)
 	@ mkdir -p $@
 
 $(NAME): $(PROTO_OBJS) $(OBJS) | $(LIB_BUILD_DIR)
-	$(CXX) -shared -o $@ $(OBJS) $(LINKFLAGS) $(LDFLAGS)
+	$(CXX) -shared -o $@ $(OBJS) tool.so $(LINKFLAGS) $(LDFLAGS)
 	@ echo
 
 $(STATIC_NAME): $(PROTO_OBJS) $(OBJS) | $(LIB_BUILD_DIR)
-	ar rcs $@ $(PROTO_OBJS) $(OBJS)
+	ar rcs $@ $(PROTO_OBJS) $(OBJS) tool.so
 	@ echo
 
 $(TEST_BUILD_DIR)/%.o: src/$(PROJECT)/test/%.cpp $(HXX_SRCS) $(TEST_HXX_SRCS) \
