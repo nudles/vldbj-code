@@ -38,6 +38,11 @@ void Solver<Dtype>::Init(const SolverParameter& param) {
   // Scaffolding code
   InitTrainNet();
   InitTestNets();
+  // added by wangwei
+  searcher_=NULL;
+  num_queries_=param.num_queries();
+  for(int i=0;i<param.extract_feature_blob_names_size();i++)
+    extract_feature_blob_names_.push_back(param.extract_feature_blob_names(i));
   LOG(INFO) << "Solver scaffolding done.";
 }
 
@@ -255,6 +260,21 @@ void Solver<Dtype>::Test(const int test_net_id) {
   vector<Blob<Dtype>*> bottom_vec;
   const shared_ptr<Net<Dtype> >& test_net = test_nets_[test_net_id];
   Dtype loss = 0;
+  Dtype* label=NULL;
+  Dtyp** dbs=NULL;
+  dbs=new (Dtype*)[extract_feature_blob_names_.size()];
+
+  shared_ptr<Blob<Dtype> > label_blob=test_net->blob_by_name("label");
+  int total_batches=label_blob->num()*param_.test_iter(test_net_id);
+  if(searcher_==NULL&&label==NULL){
+    label=new Dtype[total_batches*label_blob->count()];
+  }
+
+  vector<shared_ptr<Blob<Dtype> > > blobs;
+  for(int i=0;i<extract_feature_blob_names_.size();i++){
+    blobs.push_back(test_net->blob_by_name(extract_feature_blob_names_[i]));
+    dbs[i]=new Dtyp[total_batches*blobs.back()->count()];
+  }
   for (int i = 0; i < param_.test_iter(test_net_id); ++i) {
     Dtype iter_loss;
     const vector<Blob<Dtype>*>& result =
@@ -270,6 +290,7 @@ void Solver<Dtype>::Test(const int test_net_id) {
           test_score_output_id.push_back(j);
         }
       }
+
     } else {
       int idx = 0;
       for (int j = 0; j < result.size(); ++j) {
@@ -279,7 +300,25 @@ void Solver<Dtype>::Test(const int test_net_id) {
         }
       }
     }
+    if(searcher_==NULL){
+     int count=label_blob->count();
+      memcpy(label+i*count, label_blob->cpu_data(), sizeof(Dtype)*count);
+    }
+    for(int k=0;k<extract_feature_blob_names_.size();k++){
+      int count=blobs[k]->count();
+      memcpy(dbs[k]+i*count, blobs[k]->cpu_data(), count*sizeof(Dtype));
+    }
   }
+  char perf[2048];
+  int label_dim=label->count()/label->num();
+  for(int k=0;k<extract_feature_blob_names_.size();k++){
+    searcher_->Search(dbs[k], total_batches*blobs[k]->num(),
+        blobs[k]->count()/blobs[k]->num(),num_queries_,label,label_dim);
+    sprintf(perf+strlen(perf),"\nMAP feature from blob %s is %.4f",
+        extract_feature_blob_names_[i], searcher_->GetMAP();
+  }
+  LOG(ERROR)<<perf;
+
   if (param_.test_compute_loss()) {
     loss /= param_.test_iter(test_net_id);
     LOG(INFO) << "Test loss: " << loss;

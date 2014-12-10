@@ -128,7 +128,6 @@ int main(int argc, char** argv) {
 
   // Storing to db
   string root_folder(argv[1]);
-  Datum datum;
   int count = 0;
   const int kMaxKeyLength = 256;
   char key_cstr[kMaxKeyLength];
@@ -136,22 +135,25 @@ int main(int argc, char** argv) {
   bool data_size_initialized = false;
   int line_id=-1;
   while(!infile.eof()){
+    Datum datum;
     line_id++;
     // parse one line
     string line;
     std::getline(infile, line);
+    if(infile.eof())
+      break;
     std::vector<std::string> strs;
     // format of line: <int idx> <path str> <int label>[ <int label>]#$$#<float>
     boost::split(strs, line, boost::is_any_of(" #"));
     string imgpath=strs[1];
-    int k=1;
+    int k=2;
     while(strs[k]!="$$"&&k<strs.size())
       datum.add_multi_label(boost::lexical_cast<int>(strs[k++]));
     CHECK_LT(k, strs.size());
     k++;
     while(k<strs.size())
       datum.add_text(boost::lexical_cast<float>(strs[k++]));
-    CHECK_EQ(datum.text_size(), FLAGS_text_dim);
+    CHECK_EQ(datum.text_size(), FLAGS_text_dim)<<"line id "<<line_id;
 
     // read image, label field is not used, set it to be -1, use multi_label
     if (!ReadImageToDatum(root_folder + "/"+imgpath,
@@ -203,6 +205,7 @@ int main(int argc, char** argv) {
       LOG(ERROR) << "Processed " << count << " files.";
     }
   }
+  infile.close();
   // write the last batch
   if (count % 1000 != 0) {
     if (db_backend == "leveldb") {  // leveldb
@@ -212,11 +215,14 @@ int main(int argc, char** argv) {
     } else if (db_backend == "lmdb") {  // lmdb
       CHECK_EQ(mdb_txn_commit(mdb_txn), MDB_SUCCESS) << "mdb_txn_commit failed";
       mdb_close(mdb_env, mdb_dbi);
+      LOG(ERROR)<<"after close db!";
       mdb_env_close(mdb_env);
+      LOG(ERROR)<<"after close env!";
     } else {
       LOG(FATAL) << "Unknown db backend " << db_backend;
     }
     LOG(ERROR) << "Processed " << count << " files.";
   }
+  LOG(ERROR)<<"Finished";
   return 0;
 }

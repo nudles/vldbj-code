@@ -60,6 +60,11 @@ class Solver {
   vector<shared_ptr<Net<Dtype> > > test_nets_;
 
   DISABLE_COPY_AND_ASSIGN(Solver);
+
+  // added by wangwei
+  evaluator::Searcher *searcher_;
+  vector<string> extract_feature_blob_names_;
+  int num_queries_;
 };
 
 

@@ -40,15 +40,15 @@ void SoftmaxMultiLabelLossLayer<Dtype>::Forward_cpu(
   int num = prob_.num();
   int dim = prob_.count() / num;
   int spatial_dim = prob_.height() * prob_.width();
-  int max_labels = bottom[1]->count()/num;
+  int label_dim = bottom[1]->count()/num;
   CHECK_EQ(spatial_dim, 1);
   Dtype loss = 0;
   for (int i = 0; i < num; ++i) {
     Dtype tmp_loss=0;
     int num_labels=0;
-    for( int j=0; label[i*max_labels+j]!=-1;++j){
+    for( int j=0; label[i*label_dim+j]!=-1;++j){
       tmp_loss -= log(std::max(prob_data[i * dim +
-          static_cast<int>(label[i * max_labels+j])], Dtype(FLT_MIN)));
+          static_cast<int>(label[i * label_dim+j])], Dtype(FLT_MIN)));
       num_labels+=1;
     }
     loss+=tmp_loss/num_labels;

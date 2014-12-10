@@ -113,10 +113,11 @@ void NuswideDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
     << (*top)[0]->width()<<". Text vector dim: "<<datum.text_size();
   // label
   if (this->output_labels_) {
+    //allocate one more for marker
     (*top)[1]->Reshape(this->layer_param_.data_param().batch_size(),
-        this->layer_param_.data_param().max_labels(), 1, 1);
+        this->layer_param_.data_param().max_labels()+1, 1, 1);
     this->prefetch_label_.Reshape(this->layer_param_.data_param().batch_size(),
-        this->layer_param_.data_param().max_labels(),  1, 1);
+        this->layer_param_.data_param().max_labels()+1,  1, 1);
   }
   // text
   if (datum.text_size()){
@@ -168,10 +169,13 @@ void NuswideDataLayer<Dtype>::InternalThreadEntry() {
     this->data_transformer_.Transform(item_id, datum, this->mean_, top_data);
 
     if (this->output_labels_) {
-      CHECK_LE(datum.multi_label_size(), this->layer_param_.data_param().max_labels());
-      int m=datum.multi_label_size();
-      for(int i=0;i<m;i++)
-        top_label[item_id*m+i]=static_cast<Dtype>(datum.multi_label(i));
+      int label_dim=this->layer_param_.data_param().max_labels()+1;
+      CHECK_LE(datum.multi_label_size(), label_dim);
+      int i=0;
+      for(;i<datum.multi_label_size();i++)
+        top_label[item_id*label_dim+i]=static_cast<Dtype>(datum.multi_label(i));
+      // add a marker
+      top_label[item_id*label_dim+i]=-1;
     }
 
     if (datum.text_size()){
