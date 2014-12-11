@@ -108,7 +108,9 @@ class PrecisionRecallLayer : public Layer<Dtype> {
     return LayerParameter_LayerType_PRECISION_RECALL;
   }
 
-  virtual inline int ExactNumBottomBlobs() const { return 2; }
+  virtual inline int ExactNumBottomBlobs() const { return -1; }
+  virtual inline int MinBottomBlobs() const { return 2; }
+  virtual inline int MaxBottomBlobs() const {return 3; }
   virtual inline int ExactNumTopBlobs() const { return 1; }
 
  protected:

@@ -135,6 +135,7 @@ class NuswideDataLayer : public DataLayer<Dtype> {
   virtual inline LayerParameter_LayerType type() const {
     return LayerParameter_LayerType_NUSWIDE_DATA;
   }
+  virtual inline int MaxTopBlobs() const { return 3; }
 
  protected:
   virtual void InternalThreadEntry();

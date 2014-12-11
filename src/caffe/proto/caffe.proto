@@ -439,6 +439,7 @@ message DataParameter {
   // DEPRECATED. See TransformationParameter. Specify if we want to randomly mirror
   // data.
   optional bool mirror = 6 [default = false];
+  // max num of labels associated to one image
   optional int32 max_labels=9;
 }
 
