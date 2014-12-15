@@ -848,6 +848,7 @@ class SoftmaxMultiLabelLossLayer : public LossLayer<Dtype> {
   vector<Blob<Dtype>*> softmax_bottom_vec_;
   /// top vector holder used in call to the underlying SoftmaxLayer::Forward
   vector<Blob<Dtype>*> softmax_top_vec_;
+  vector<int> num_labels_;
 };
 }  // namespace caffe
 

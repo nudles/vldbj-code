@@ -257,7 +257,7 @@ endif
 
 # Debugging
 ifeq ($(DEBUG), 1)
-	COMMON_FLAGS += -DDEBUG -g -O0
+	COMMON_FLAGS += -DDEBUG -g 
 	NVCCFLAGS += -G
 else
 	COMMON_FLAGS += -DNDEBUG -O2
@@ -310,7 +310,7 @@ LIBRARY_DIRS += $(BLAS_LIB)
 
 # Complete build flags.
 COMMON_FLAGS += $(foreach includedir,$(INCLUDE_DIRS),-I$(includedir))
-CXXFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
+CXXFLAGS += -pthread -fPIC --std=c++11 $(COMMON_FLAGS) $(WARNINGS)
 NVCCFLAGS += -ccbin=$(CXX) -Xcompiler -fPIC $(COMMON_FLAGS) -DBOOST_NOINLINE='__attribute__ ((noinline))'
 # mex may invoke an older gcc that is too liberal with -Wuninitalized
 MATLAB_CXXFLAGS := $(CXXFLAGS) -Wno-uninitialized
@@ -443,11 +443,11 @@ $(ALL_BUILD_DIRS): | $(BUILD_DIR_LINK)
 	@ mkdir -p $@
 
 $(NAME): $(PROTO_OBJS) $(OBJS) | $(LIB_BUILD_DIR)
-	$(CXX) -shared -o $@ $(OBJS) tool.so $(LINKFLAGS) $(LDFLAGS)
+	$(CXX) -shared -o $@ $(OBJS)  $(LINKFLAGS) $(LDFLAGS)
 	@ echo
 
 $(STATIC_NAME): $(PROTO_OBJS) $(OBJS) | $(LIB_BUILD_DIR)
-	ar rcs $@ $(PROTO_OBJS) $(OBJS) tool.so
+	ar rcs $@ $(PROTO_OBJS) $(OBJS) 
 	@ echo
 
 $(TEST_BUILD_DIR)/%.o: src/$(PROJECT)/test/%.cpp $(HXX_SRCS) $(TEST_HXX_SRCS) \

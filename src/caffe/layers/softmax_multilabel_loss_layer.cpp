@@ -43,15 +43,21 @@ void SoftmaxMultiLabelLossLayer<Dtype>::Forward_cpu(
   int label_dim = bottom[1]->count()/num;
   CHECK_EQ(spatial_dim, 1);
   Dtype loss = 0;
+  if(num_labels_.size()==0)
+    num_labels_.resize(num);
+  else
+    CHECK_EQ(num_labels_.size(), num);
   for (int i = 0; i < num; ++i) {
     Dtype tmp_loss=0;
-    int num_labels=0;
-    for( int j=0; label[i*label_dim+j]!=-1;++j){
+    int labelon=0;
+    for( int j=0; label[i*label_dim+j]!=-1&&j<label_dim;++j){
       tmp_loss -= log(std::max(prob_data[i * dim +
           static_cast<int>(label[i * label_dim+j])], Dtype(FLT_MIN)));
-      num_labels+=1;
+      labelon+=1;
     }
-    loss+=tmp_loss/num_labels;
+    CHECK_GT(labelon, 0)<<"image has no label";
+    loss+=tmp_loss/labelon;
+    num_labels_[i]=labelon;
   }
   (*top)[0]->mutable_cpu_data()[0] = loss / num ;
   if (top->size() == 2) {
@@ -75,11 +81,12 @@ void SoftmaxMultiLabelLossLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>&
     int num = prob_.num();
     int dim = prob_.count() / num;
     int spatial_dim = prob_.height() * prob_.width();
-    int max_labels = (*bottom)[1]->count()/num;
+    int label_dim = (*bottom)[1]->count()/num;
     CHECK_EQ(spatial_dim, 1);
     for (int i = 0; i < num; ++i) {
-      for( int j=0;label[i*max_labels+j]!=-1;++j)
-        bottom_diff[i * dim + static_cast<int>(label[i * max_labels + j])] -= 1;
+      for( int j=0;label[i*label_dim+j]!=-1&&j<label_dim;++j)
+        bottom_diff[i * dim + static_cast<int>(label[i * label_dim + j])] -=
+          1.0/num_labels_[i];
     }
     // Scale gradient
     const Dtype loss_weight = top[0]->cpu_diff()[0];

@@ -38,8 +38,8 @@ void Solver<Dtype>::Init(const SolverParameter& param) {
   InitTrainNet();
   InitTestNets();
   // added by wangwei
-  searcher_=NULL;
   num_queries_=param.num_queries();
+  searcher_=new evaluator::Searcher<Dtype>();
   for(int i=0;i<param.extract_feature_blob_names_size();i++)
     extract_feature_blob_names_.push_back(param.extract_feature_blob_names(i));
   LOG(INFO) << "Solver scaffolding done.";
@@ -259,26 +259,18 @@ void Solver<Dtype>::Test(const int test_net_id) {
   vector<Blob<Dtype>*> bottom_vec;
   const shared_ptr<Net<Dtype> >& test_net = test_nets_[test_net_id];
   Dtype loss = 0;
-  Dtype* label=NULL;
-  Dtype** dbs=NULL;
-  dbs=new Dtype*[extract_feature_blob_names_.size()];
-
   shared_ptr<Blob<Dtype> > label_blob=test_net->blob_by_name("label");
-  int total_batches=label_blob->num()*param_.test_iter(test_net_id);
-  if(searcher_==NULL){
-    label=new Dtype[total_batches*label_blob->count()];
-  }
-
   vector<shared_ptr<Blob<Dtype> > > blobs;
-  for(int i=0;i<extract_feature_blob_names_.size();i++){
+  for(int i=0;i<extract_feature_blob_names_.size();i++)
     blobs.push_back(test_net->blob_by_name(extract_feature_blob_names_[i]));
-    dbs[i]=new Dtype[total_batches*blobs.back()->count()];
-  }
+  Blob<Dtype> ir_label;
+  vector<Blob<Dtype> > ir_dbs(blobs.size());
+
   DLOG(INFO)<<"Forward test net to extract features from blobs";
   for (int i = 0; i < param_.test_iter(test_net_id); ++i) {
     Dtype iter_loss;
     const vector<Blob<Dtype>*>& result =
-        test_net->Forward(bottom_vec, &iter_loss);
+      test_net->Forward(bottom_vec, &iter_loss);
     if (param_.test_compute_loss()) {
       loss += iter_loss;
     }
@@ -290,7 +282,11 @@ void Solver<Dtype>::Test(const int test_net_id) {
           test_score_output_id.push_back(j);
         }
       }
-
+      for(int i=0;i<ir_dbs.size();i++)
+        ir_dbs[i].Reshape(param_.test_iter(test_net_id)*blobs[i]->num(),
+            blobs[i]->channels(), 1,1);
+      ir_label.Reshape(param_.test_iter(test_net_id)*label_blob->num(), 
+          label_blob->channels(),1,1);
     } else {
       int idx = 0;
       for (int j = 0; j < result.size(); ++j) {
@@ -300,24 +296,54 @@ void Solver<Dtype>::Test(const int test_net_id) {
         }
       }
     }
-    if(searcher_==NULL){
-     int count=label_blob->count();
-      memcpy(label+i*count, label_blob->cpu_data(), sizeof(Dtype)*count);
-    }
+    caffe_copy(label_blob->count(), label_blob->gpu_data(), 
+        ir_label.mutable_gpu_data()+i*label_blob->count());
     for(int k=0;k<extract_feature_blob_names_.size();k++){
-      int count=blobs[k]->count();
-      memcpy(dbs[k]+i*count, blobs[k]->cpu_data(), count*sizeof(Dtype));
+      caffe_copy(blobs[k]->count(), blobs[k]->gpu_data(),
+          ir_dbs[k].mutable_gpu_data()+i*blobs[k]->count());
     }
   }
   DLOG(INFO)<<"Start retrieval...";
-  if(searcher_==NULL)
-    searcher_=new evaluator::Searcher<Dtype>();
-  int label_dim=label_blob->count()/label_blob->num();
+  int num_points=ir_label.num();
+  int label_dim=ir_label.channels();
+  searcher_->SetupGroundTruth(num_queries_, num_points, 
+      label_dim,ir_label.cpu_data());
+  Blob<Dtype> query;
+  Blob<Dtype> simmat(num_queries_, num_points,1,1);
+  Blob<Dtype> norm(num_points,1,1,1);
   for(int k=0;k<extract_feature_blob_names_.size();k++){
-    searcher_->Search(dbs[k], total_batches*blobs[k]->num(),
-        blobs[k]->count()/blobs[k]->num(),num_queries_,label,label_dim);
+    //searcher_->Search(ir_dbs_[k]., total_batches*blobs[k]->num(),
+    //blobs[k]->count()/blobs[k]->num(),num_queries_,ir_label_,label_dim);
+    CHECK_EQ(num_points, ir_dbs[k].num());
+    int point_dim=ir_dbs[k].channels();
+    query.Reshape(num_queries_, point_dim,1,1);
+    for(int i=0;i<searcher_->query_id_size();i++){
+      caffe_copy(point_dim, ir_dbs[k].gpu_data()+searcher_->query_id(i)*point_dim,
+          query.mutable_gpu_data()+i*point_dim);
+    }
+    Dtype one=1.;
+    Dtype zero=0.;
+    caffe_gpu_gemm(CblasNoTrans, CblasTrans, num_queries_, num_points,
+        point_dim, one, query.gpu_data(),  
+        ir_dbs[k].gpu_data(), zero, simmat.mutable_gpu_data());
+    caffe_gpu_mul(ir_dbs[k].count(), ir_dbs[k].gpu_data(), ir_dbs[k].gpu_data(),
+        ir_dbs[k].mutable_gpu_data());
+
+    Blob<Dtype> multiplier(point_dim,1,1,1);
+    Dtype *multi_data=multiplier.mutable_cpu_data();
+    for(int i=0;i<point_dim;i++)
+      multi_data[i]=1.;
+    caffe_gpu_gemv(CblasNoTrans, num_points, point_dim, one, ir_dbs[k].gpu_data(),
+        multiplier.gpu_data(), zero, norm.mutable_gpu_data());
+    const Dtype *norm_data=norm.cpu_data();
+    Dtype *sim_data=simmat.mutable_cpu_data();
+    for(int i=0;i<num_queries_;i++)
+      for(int j=0;j<num_points;j++)
+        sim_data[i*num_points+j]/=
+          sqrt(norm_data[searcher_->query_id(i)]* norm_data[j]);
+    float mapscore=searcher_->GetMAP(sim_data,0);
     LOG(ERROR)<<"MAP feature from blob "<<
-        extract_feature_blob_names_[k].c_str()<<" is "<< searcher_->GetMAP();
+      extract_feature_blob_names_[k].c_str()<<" is "<< mapscore;
   }
 
   if (param_.test_compute_loss()) {
