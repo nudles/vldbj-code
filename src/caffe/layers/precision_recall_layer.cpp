@@ -14,7 +14,6 @@ template <typename Dtype>
 void PrecisionRecallLayer<Dtype>::LayerSetUp(
   const vector<Blob<Dtype>*>& bottom, vector<Blob<Dtype>*>* top) {
   top_k_ = this->layer_param_.pr_param().top_k();
-   std::uniform_int_distribution<int> distribution_(0,80);
 }
 
 template <typename Dtype>
@@ -53,17 +52,9 @@ void PrecisionRecallLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom
     // sort label id in ascending order
     // std::sort(bottom_data_vector.begin(), bottom_data_vector.begin()+top_k_);
     Dtype ncorrect = 0, ntotal=0;
-    vector<int> groundtruth;
     // check if true label is in top k predictions
-    for(int j=0;bottom_label[label_dim*i+j]!=-1&&j<std::min(top_k_, label_dim);j++){
+    for(int j=0;bottom_label[label_dim*i+j]!=-1&&j<label_dim;j++){
       int label=static_cast<int>(bottom_label[label_dim*i+j]);
-      groundtruth.push_back(label);
-    }
-    while(groundtruth.size()<top_k_){
-      groundtruth.push_back(caffe_rng_rand()%81);
-    }
-    for(int j=0;j<top_k_;j++){
-      int label=groundtruth[j];
       for (int k = 0; k < top_k_; k++) {
         if (bottom_data_vector[k].second == label){
           ++ncorrect;
@@ -74,7 +65,7 @@ void PrecisionRecallLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom
     }
     CHECK_GT(ntotal,0);
     precision+=ncorrect/top_k_;
-    recall+=ncorrect/top_k_;
+    recall+=ncorrect/ntotal;
   }
 
   // precision

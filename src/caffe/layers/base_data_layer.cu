@@ -16,6 +16,9 @@ void BasePrefetchingDataLayer<Dtype>::Forward_gpu(
     caffe_copy(prefetch_label_.count(), prefetch_label_.cpu_data(),
         (*top)[1]->mutable_gpu_data());
   }
+  caffe_copy(prefetch_text_.count(), prefetch_text_.cpu_data(),
+      (*top)[2]->mutable_gpu_data());
+
   // Start a new prefetch thread
   CreatePrefetchThread();
 }

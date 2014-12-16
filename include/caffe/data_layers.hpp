@@ -93,6 +93,7 @@ class BasePrefetchingDataLayer :
  protected:
   Blob<Dtype> prefetch_data_;
   Blob<Dtype> prefetch_label_;
+  Blob<Dtype> prefetch_text_;
 };
 
 template <typename Dtype>
@@ -139,7 +140,6 @@ class NuswideDataLayer : public DataLayer<Dtype> {
 
  protected:
   virtual void InternalThreadEntry();
-  Blob<Dtype> prefetch_text_;
   int text_dim_;
 };
 
