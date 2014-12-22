@@ -1,0 +1,17 @@
+net: "models/singlelabel/image_path.prototxt"
+test_iter: 80
+test_interval: 500
+base_lr: 0.002
+lr_policy: "step"
+gamma: 0.1
+stepsize: 20000
+momentum: 0.9
+display: 100
+max_iter: 50000
+weight_decay: 0.0005
+snapshot: 10000
+num_queries:1000
+snapshot_prefix: "models/singlelabel/singlelabel_image"
+solver_mode: GPU
+debug_info: true
+extract_feature_blob_names: "fc8-image"

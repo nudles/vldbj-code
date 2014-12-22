@@ -16,7 +16,7 @@
 #include <leveldb/write_batch.h>
 #include <lmdb.h>
 #include <sys/stat.h>
-
+#include <unordered_set>
 #include <algorithm>
 #include <fstream>  // NOLINT(readability/streams)
 #include <string>
@@ -38,7 +38,19 @@ DEFINE_bool(shuffle, false,
 DEFINE_string(backend, "lmdb", "The backend for storing the result");
 DEFINE_int32(resize_width, 0, "Width images are resized to");
 DEFINE_int32(resize_height, 0, "Height images are resized to");
+
 DEFINE_int32(text_dim, 100, "dimension of the text vector");
+DEFINE_int32(nlabels, 81, "select images with only popular labels");
+DEFINE_int32(max_labels, 1, "filter images with more labels than this number");
+DEFINE_int32(start, 0, "filter records whose index is before this number");
+DEFINE_int32(size, 0, "num of records to insert");
+
+// num of images associated with each label, in ascending order
+int label_popularity[]={36, 19, 57, 63, 80,  6, 23, 78, 48, 65, 52, 64, 29, 10,
+  31, 14, 76, 26, 67, 16, 20, 17, 46,  0, 38, 71, 59, 47, 21, 27,  3, 77, 45, 
+  54, 15,  9, 66, 22, 32, 58, 35, 53, 12,  7, 69, 11, 18, 60, 43, 68, 25, 70, 
+  28, 37, 61,  4, 73, 33, 40,  5, 39,  2, 72, 56, 74, 51, 49, 62, 24, 50, 41, 
+  34, 44, 79,  8, 30,  1, 75, 42, 13, 55};
 
 int main(int argc, char** argv) {
   ::google::InitGoogleLogging(argv[0]);
@@ -54,6 +66,10 @@ int main(int argc, char** argv) {
         "The ImageNet dataset for the training demo is at\n"
         "    http://www.image-net.org/download-images\n");
   gflags::ParseCommandLineFlags(&argc, &argv, true);
+
+  std::unordered_set<int> labelset;
+  for(int i=81-FLAGS_nlabels;i<81;i++)
+    labelset.insert(label_id[i]);
 
   if (argc != 4) {
     gflags::ShowUsageWithFlagsRestrict(argv[0],
@@ -109,6 +125,8 @@ int main(int argc, char** argv) {
   }
   bool is_color = !FLAGS_gray;
   /*
+   * the suffle code is deleted because when splitting train, val, test data,
+   * the records are already shuffled.
   std::vector<std::pair<string, int> > lines;
   string filename;
   int label;
@@ -136,19 +154,29 @@ int main(int argc, char** argv) {
   int line_id=-1;
   while(!infile.eof()){
     Datum datum;
-    line_id++;
     // parse one line
     string line;
     std::getline(infile, line);
+    // must check eof here
     if(infile.eof())
       break;
     std::vector<std::string> strs;
-    // format of line: <int idx> <path str> <int label>[ <int label>]#$$#<float>
+    /* format of line: 
+     * <int record_idx> <str image_path> <int label>[ <int label>]#$$#<float vector>
+     */
     boost::split(strs, line, boost::is_any_of(" #"));
     string imgpath=strs[1];
     int k=2;
-    while(strs[k]!="$$"&&k<strs.size())
-      datum.add_multi_label(boost::lexical_cast<int>(strs[k++]));
+    while(strs[k]!="$$"&&k<strs.size()){
+      if(labelset.find(datum.multi_label(0))!=labelset.end())
+        datum.add_multi_label(boost::lexical_cast<int>(strs[k]));
+      k++;
+    }
+    if(datum.multi_label_size()>FLAGS_max_labels||datum.multi_label_size()==0)
+      continue;
+    line_id++;
+    if(line_id<FLAGS_start)
+      continue;
     CHECK_LT(k, strs.size());
     k++;
     while(k<strs.size())
@@ -204,6 +232,8 @@ int main(int argc, char** argv) {
       }
       LOG(ERROR) << "Processed " << count << " files.";
     }
+    if(count>=FLAGS_size&&FLAGS_size>0)
+      break;
   }
   infile.close();
   // write the last batch
@@ -224,5 +254,6 @@ int main(int argc, char** argv) {
     LOG(ERROR) << "Processed " << count << " files.";
   }
   LOG(ERROR)<<"Finished";
+  LOG(ERROR)<<"total lines "<<line_id+1;
   return 0;
 }

@@ -1,0 +1,14 @@
+net: "models/nuswide/image_path.prototxt"
+test_iter: 267
+test_interval: 1000
+base_lr: 0.002
+lr_policy: "fixed"
+display: 50
+max_iter: 50000
+weight_decay: 0.0005
+snapshot: 10000
+snapshot_prefix: "models/nuswide/nuswide_image"
+solver_type: ADAGRAD
+solver_mode: GPU
+debug_info: false
+extract_feature_blob_names: "fc8-image"
