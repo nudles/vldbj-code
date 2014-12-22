@@ -26,7 +26,8 @@ void SoftmaxMultiLabelLossLayer<Dtype>::Reshape(
   softmax_layer_->Reshape(softmax_bottom_vec_, &softmax_top_vec_);
   if (top->size() >= 2) {
     // softmax output
-    (*top)[1]->ReshapeLike(*bottom[0]);
+    //(*top)[1]->ReshapeLike(*bottom[0]);
+    (*top)[1]->Reshape(bottom[0]->num(),1,1,1);
   }
 }
 
@@ -41,6 +42,9 @@ void SoftmaxMultiLabelLossLayer<Dtype>::Forward_cpu(
   int dim = prob_.count() / num;
   int spatial_dim = prob_.height() * prob_.width();
   int label_dim = bottom[1]->count()/num;
+  Dtype* toploss;
+  if(top->size()>1)
+    toploss=(*top)[1]->mutable_cpu_data();
   CHECK_EQ(spatial_dim, 1);
   Dtype loss = 0;
   if(num_labels_.size()==0)
@@ -57,12 +61,16 @@ void SoftmaxMultiLabelLossLayer<Dtype>::Forward_cpu(
     }
     CHECK_GT(labelon, 0)<<"image has no label";
     loss+=tmp_loss/labelon;
+    if(top->size()>1)
+      toploss[i]=tmp_loss/labelon;
     num_labels_[i]=labelon;
   }
   (*top)[0]->mutable_cpu_data()[0] = loss / num ;
+  /*
   if (top->size() == 2) {
     (*top)[1]->ShareData(prob_);
   }
+  */
 }
 
 template <typename Dtype>

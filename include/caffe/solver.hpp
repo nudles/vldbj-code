@@ -55,6 +55,10 @@ class Solver {
   virtual void RestoreSolverState(const SolverState& state) = 0;
   void DisplayOutputBlobs(const int net_id);
 
+  void CalcSimMat(const Blob<Dtype>& query_src, const Blob<Dtype> & db, 
+    const Blob<Dtype>& query_nrm, const Blob<Dtype>& db_nrm,
+    Blob<Dtype>* simmat);
+
   SolverParameter param_;
   int iter_;
   shared_ptr<Net<Dtype> > net_;

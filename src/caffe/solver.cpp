@@ -303,47 +303,30 @@ void Solver<Dtype>::Test(const int test_net_id) {
           ir_dbs[k].mutable_gpu_data()+i*blobs[k]->count());
     }
   }
-  DLOG(INFO)<<"Start retrieval...";
+  LOG(INFO)<<"Start retrieval using "<<num_queries_<< "queries";
   int num_points=ir_label.num();
   int label_dim=ir_label.channels();
   searcher_->SetupGroundTruth(num_queries_, num_points, 
       label_dim,ir_label.cpu_data());
-  Blob<Dtype> query;
-  Blob<Dtype> simmat(num_queries_, num_points,1,1);
-  Blob<Dtype> norm(num_points,1,1,1);
-  for(int k=0;k<extract_feature_blob_names_.size();k++){
-    //searcher_->Search(ir_dbs_[k]., total_batches*blobs[k]->num(),
-    //blobs[k]->count()/blobs[k]->num(),num_queries_,ir_label_,label_dim);
-    CHECK_EQ(num_points, ir_dbs[k].num());
-    int point_dim=ir_dbs[k].channels();
-    query.Reshape(num_queries_, point_dim,1,1);
-    for(int i=0;i<searcher_->query_id_size();i++){
-      caffe_copy(point_dim, ir_dbs[k].gpu_data()+searcher_->query_id(i)*point_dim,
-          query.mutable_gpu_data()+i*point_dim);
-    }
-    Dtype one=1.;
-    Dtype zero=0.;
-    caffe_gpu_gemm(CblasNoTrans, CblasTrans, num_queries_, num_points,
-        point_dim, one, query.gpu_data(),  
-        ir_dbs[k].gpu_data(), zero, simmat.mutable_gpu_data());
-    caffe_gpu_mul(ir_dbs[k].count(), ir_dbs[k].gpu_data(), ir_dbs[k].gpu_data(),
-        ir_dbs[k].mutable_gpu_data());
 
-    Blob<Dtype> multiplier(point_dim,1,1,1);
-    Dtype *multi_data=multiplier.mutable_cpu_data();
-    for(int i=0;i<point_dim;i++)
-      multi_data[i]=1.;
-    caffe_gpu_gemv(CblasNoTrans, num_points, point_dim, one, ir_dbs[k].gpu_data(),
-        multiplier.gpu_data(), zero, norm.mutable_gpu_data());
-    const Dtype *norm_data=norm.cpu_data();
-    Dtype *sim_data=simmat.mutable_cpu_data();
-    for(int i=0;i<num_queries_;i++)
-      for(int j=0;j<num_points;j++)
-        sim_data[i*num_points+j]/=
-          sqrt(norm_data[searcher_->query_id(i)]* norm_data[j]);
-    float mapscore=searcher_->GetMAP(sim_data,0);
-    LOG(ERROR)<<"MAP feature from blob "<<
-      extract_feature_blob_names_[k].c_str()<<" is "<< mapscore;
+  int num_blobs=extract_feature_blob_names_.size();
+  vector<Blob<Dtype> > blob_nrm(num_blobs);
+  for(int k=0;k<num_blobs;k++){
+    blob_nrm[k].Reshape(num_points, 1,1,1);
+    Dtype* nrmptr=blob_nrm[k].mutable_cpu_data();
+    int point_dim=ir_dbs[k].channels();
+    for(int n=0;n<num_points;n++)
+      caffe_gpu_nrm2(point_dim, ir_dbs[k].gpu_data()+n*point_dim, nrmptr+n);
+  }
+
+  Blob<Dtype> simmat(num_queries_, num_points,1,1);
+  for(int i=0;i<num_blobs;i++){
+    for(int j=0;j<num_blobs;j++){
+      CalcSimMat(ir_dbs[i], ir_dbs[j], blob_nrm[i], blob_nrm[j], &simmat);
+      float mapscore=searcher_->GetMAP(simmat.cpu_data(),0);
+      LOG(ERROR)<<"MAP feature for query from "<<extract_feature_blob_names_[i]
+      <<" against "<<extract_feature_blob_names_[j] <<" is "<< mapscore;
+    }
   }
 
   if (param_.test_compute_loss()) {
@@ -367,6 +350,29 @@ void Solver<Dtype>::Test(const int test_net_id) {
   Caffe::set_phase(Caffe::TRAIN);
 }
 
+template <typename Dtype>
+void Solver<Dtype>::CalcSimMat(const Blob<Dtype>& query_src, 
+    const Blob<Dtype> & db, const Blob<Dtype>& query_nrm, 
+    const Blob<Dtype>& db_nrm, Blob<Dtype>* simmat){
+  int num_points=db.num();
+  int point_dim=db.channels();
+  Blob<Dtype> query(num_queries_, point_dim,1,1);
+  for(int i=0;i<searcher_->query_id_size();i++){
+    caffe_copy(point_dim, query_src.gpu_data()+searcher_->query_id(i)*point_dim,
+        query.mutable_gpu_data()+i*point_dim);
+  }
+  Dtype one=1.;
+  Dtype zero=0.;
+  caffe_gpu_gemm(CblasNoTrans, CblasTrans, num_queries_, num_points,
+      point_dim, one, query.gpu_data(),  
+      db.gpu_data(), zero, simmat->mutable_gpu_data());
+  Dtype *sim_data=simmat->mutable_cpu_data();
+  const Dtype *qnrm=query_nrm.cpu_data();
+  const Dtype *dbnrm=db_nrm.cpu_data();
+  for(int i=0;i<num_queries_;i++)
+    for(int j=0;j<num_points;j++)
+      sim_data[i*num_points+j]/=qnrm[searcher_->query_id(i)]* dbnrm[j];
+}
 
 template <typename Dtype>
 void Solver<Dtype>::Snapshot() {

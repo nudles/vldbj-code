@@ -142,6 +142,15 @@ void caffe_gpu_scale<double>(const int n, const double alpha, const double *x,
   CUBLAS_CHECK(cublasDscal(Caffe::cublas_handle(), n, &alpha, y, 1));
 }
 
+template<>
+void caffe_gpu_nrm2<float>(const int n, const float* a, float* b){
+  CUBLAS_CHECK(cublasSnrm2(Caffe::cublas_handle(), n, a, 1, b));
+}
+template<>
+void caffe_gpu_nrm2<double>(const int n, const double* a, double* b){
+  CUBLAS_CHECK(cublasDnrm2(Caffe::cublas_handle(), n, a, 1, b));
+}
+
 template <typename Dtype>
 __global__ void set_kernel(const int n, const Dtype alpha, Dtype* y) {
   CUDA_KERNEL_LOOP(index, n) {

@@ -56,31 +56,6 @@ void NuswideDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
       LOG(FATAL) << "Unknown database backend";
   }
 
-  // Check if we would need to randomly skip a few data points
-  if (this->layer_param_.data_param().rand_skip()) {
-    unsigned int skip = caffe_rng_rand() %
-      this->layer_param_.data_param().rand_skip();
-    LOG(INFO) << "Skipping first " << skip << " data points.";
-    while (skip-- > 0) {
-      switch (this->layer_param_.data_param().backend()) {
-        case DataParameter_DB_LEVELDB:
-          this->iter_->Next();
-          if (!this->iter_->Valid()) {
-            this->iter_->SeekToFirst();
-          }
-          break;
-        case DataParameter_DB_LMDB:
-          if (mdb_cursor_get(this->mdb_cursor_, &this->mdb_key_, &this->mdb_value_, MDB_NEXT)
-              != MDB_SUCCESS) {
-            CHECK_EQ(mdb_cursor_get(this->mdb_cursor_, &this->mdb_key_, &this->mdb_value_,
-                  MDB_FIRST), MDB_SUCCESS);
-          }
-          break;
-        default:
-          LOG(FATAL) << "Unknown database backend";
-      }
-    }
-  }
   // Read a data point, and use it to initialize the top blob.
   Datum datum;
   switch (this->layer_param_.data_param().backend()) {
@@ -132,6 +107,35 @@ void NuswideDataLayer<Dtype>::DataLayerSetUp(const vector<Blob<Dtype>*>& bottom,
   this->datum_width_ = datum.width();
   this->datum_size_ = datum.channels() * datum.height() * datum.width();
   this->text_dim_=datum.text_size();
+
+  // Check if we would need to randomly skip a few data points
+  if (this->layer_param_.data_param().rand_skip()||this->layer_param_.data_param().skip()) {
+    unsigned int skip =0;
+    if(this->layer_param_.data_param().skip())
+      skip=this->layer_param_.data_param().skip();
+    else
+      skip= caffe_rng_rand() % this->layer_param_.data_param().rand_skip();
+    LOG(INFO) << "Skipping first " << skip << " data points.";
+    if(skip>0&&this->layer_param_.data_param().backend()==DataParameter_DB_LMDB)
+      CHECK_EQ(mdb_cursor_get(this->mdb_cursor_, &this->mdb_key_, &this->mdb_value_,
+            MDB_FIRST), MDB_SUCCESS);
+    while (skip-- > 0) {
+      switch (this->layer_param_.data_param().backend()) {
+        case DataParameter_DB_LEVELDB:
+          this->iter_->Next();
+          if (!this->iter_->Valid()) {
+            this->iter_->SeekToFirst();
+          }
+          break;
+        case DataParameter_DB_LMDB:
+          CHECK_EQ (mdb_cursor_get(this->mdb_cursor_, &this->mdb_key_, &this->mdb_value_, MDB_NEXT)
+              ,MDB_SUCCESS);
+          break;
+        default:
+          LOG(FATAL) << "Unknown database backend";
+      }
+    }
+  }
 }
 
 // This function is used to create a thread that prefetches the data.
@@ -150,19 +154,19 @@ void NuswideDataLayer<Dtype>::InternalThreadEntry() {
   for (int item_id = 0; item_id < batch_size; ++item_id) {
     // get a blob
     switch (this->layer_param_.data_param().backend()) {
-    case DataParameter_DB_LEVELDB:
-      CHECK(this->iter_);
-      CHECK(this->iter_->Valid());
-      datum.ParseFromString(this->iter_->value().ToString());
-      break;
-    case DataParameter_DB_LMDB:
-      CHECK_EQ(mdb_cursor_get(this->mdb_cursor_, &this->mdb_key_,
+      case DataParameter_DB_LEVELDB:
+        CHECK(this->iter_);
+        CHECK(this->iter_->Valid());
+        datum.ParseFromString(this->iter_->value().ToString());
+        break;
+      case DataParameter_DB_LMDB:
+        CHECK_EQ(mdb_cursor_get(this->mdb_cursor_, &this->mdb_key_,
               &this->mdb_value_, MDB_GET_CURRENT), MDB_SUCCESS);
-      datum.ParseFromArray(this->mdb_value_.mv_data,
-          this->mdb_value_.mv_size);
-      break;
-    default:
-      LOG(FATAL) << "Unknown database backend";
+        datum.ParseFromArray(this->mdb_value_.mv_data,
+            this->mdb_value_.mv_size);
+        break;
+      default:
+        LOG(FATAL) << "Unknown database backend";
     }
 
     // Apply data transformations (mirror, scale, crop...)
@@ -186,25 +190,33 @@ void NuswideDataLayer<Dtype>::InternalThreadEntry() {
 
     // go to the next iter
     switch (this->layer_param_.data_param().backend()) {
-    case DataParameter_DB_LEVELDB:
-      this->iter_->Next();
-      if (!this->iter_->Valid()) {
-        // We have reached the end. Restart from the first.
-        DLOG(INFO) << "Restarting data prefetching from start.";
-        this->iter_->SeekToFirst();
-      }
-      break;
-    case DataParameter_DB_LMDB:
-      if (mdb_cursor_get(this->mdb_cursor_, &this->mdb_key_,
+      case DataParameter_DB_LEVELDB:
+        this->iter_->Next();
+        if (!this->iter_->Valid()) {
+          // We have reached the end. Restart from the first.
+          DLOG(INFO) << "Restarting data prefetching from start.";
+          this->iter_->SeekToFirst();
+        }
+        break;
+      case DataParameter_DB_LMDB:
+        if (mdb_cursor_get(this->mdb_cursor_, &this->mdb_key_,
               &this->mdb_value_, MDB_NEXT) != MDB_SUCCESS) {
-        // We have reached the end. Restart from the first.
-        DLOG(INFO) << "Restarting data prefetching from start.";
-        CHECK_EQ(mdb_cursor_get(this->mdb_cursor_, &this->mdb_key_,
-                &this->mdb_value_, MDB_FIRST), MDB_SUCCESS);
-      }
-      break;
-    default:
-      LOG(FATAL) << "Unknown database backend";
+          // We have reached the end. Restart from the first.
+          LOG(INFO) << "Restarting data prefetching from start.";
+          CHECK_EQ(mdb_cursor_get(this->mdb_cursor_, &this->mdb_key_, &this->mdb_value_,
+                MDB_FIRST), MDB_SUCCESS);
+          int skip=0;
+          if(this->layer_param_.data_param().skip()) 
+            skip=this->layer_param_.data_param().skip();
+          CHECK(item_id==batch_size-1||skip==0)<<"item_id "<<item_id<<" "<<skip;
+          while (skip-- > 0) {
+            CHECK_EQ(mdb_cursor_get(this->mdb_cursor_, &this->mdb_key_, &this->mdb_value_, MDB_NEXT)
+                ,MDB_SUCCESS);
+          }
+        }
+        break;
+      default:
+        LOG(FATAL) << "Unknown database backend";
     }
   }
 }

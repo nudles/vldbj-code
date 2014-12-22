@@ -27,6 +27,9 @@ DEFINE_string(snapshot, "",
 DEFINE_string(weights, "",
     "Optional; the pretrained weights to initialize finetuning. "
     "Cannot be set simultaneously with snapshot.");
+DEFINE_string(weights2, "",
+    "Optional; the pretrained weights to initialize finetuning. "
+    "Cannot be set simultaneously with snapshot.");
 DEFINE_int32(iterations, 50,
     "The number of iterations to run.");
 
@@ -114,6 +117,10 @@ int train() {
   } else if (FLAGS_weights.size()) {
     LOG(INFO) << "Finetuning from " << FLAGS_weights;
     solver->net()->CopyTrainedLayersFrom(FLAGS_weights);
+    if (FLAGS_weights2.size()){
+      LOG(INFO)<<"Finetuing from "<<FLAGS_weights2;
+      solver->net()->CopyTrainedLayersFrom(FLAGS_weights2);
+    }
     solver->Solve();
   } else {
     solver->Solve();

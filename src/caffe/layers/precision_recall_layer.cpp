@@ -39,6 +39,7 @@ void PrecisionRecallLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom
   int label_dim=bottom[1]->count()/num;
   vector<Dtype> maxval(top_k_+1);
   Dtype recall=0.f, precision=0.f;
+  Dtype ncorrect = 0, ntotal=0;
   for (int i = 0; i < num; ++i) {
     // Top-k accuracy
     std::vector<std::pair<Dtype, int> > bottom_data_vector;
@@ -51,7 +52,6 @@ void PrecisionRecallLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom
         bottom_data_vector.end(), std::greater<std::pair<Dtype, int> >());
     // sort label id in ascending order
     // std::sort(bottom_data_vector.begin(), bottom_data_vector.begin()+top_k_);
-    Dtype ncorrect = 0, ntotal=0;
     // check if true label is in top k predictions
     for(int j=0;bottom_label[label_dim*i+j]!=-1&&j<label_dim;j++){
       int label=static_cast<int>(bottom_label[label_dim*i+j]);
@@ -64,14 +64,12 @@ void PrecisionRecallLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom
       ++ntotal;
     }
     CHECK_GT(ntotal,0);
-    precision+=ncorrect/top_k_;
-    recall+=ncorrect/ntotal;
   }
 
   // precision
-  (*top)[0]->mutable_cpu_data()[0] = precision / num;
+  (*top)[0]->mutable_cpu_data()[0] = ncorrect / top_k_ / num;
   // recall
-  (*top)[0]->mutable_cpu_data()[1] = recall / num;
+  (*top)[0]->mutable_cpu_data()[1] = ncorrect / ntotal;
   // Accuracy layer should not be used as a loss function.
 }
 

@@ -215,6 +215,15 @@ template <>
 void caffe_abs<double>(const int n, const double* a, double* y) {
     vdAbs(n, a, y);
 }
+template<>
+void caffe_nrm2<float>(const int n, const float* a, float* b){
+  *b=cblas_snrm2(n, a, 1);
+}
+template<>
+void caffe_nrm2<double>(const int n, const double* a, double* b){
+  *b=cblas_dnrm2(n, a, 1);
+}
+
 
 unsigned int caffe_rng_rand() {
   return (*caffe_rng())();
