@@ -1,4 +1,4 @@
-name: "multilabel-image"
+name: "singlelabel-joint"
 layers {
   name: "data"
   type: NUSWIDE_DATA
@@ -6,14 +6,14 @@ layers {
   top: "label"
   top: "text"
   data_param {
-    source: "data/nuswide/multilabel/train-lmdb"
+    source: "data/nuswide/singlelabel/train-lmdb"
     backend: LMDB
     batch_size: 32
-    max_labels:13
+    max_labels:1
   }
   transform_param {
     crop_size: 227
-    mean_file: "data/nuswide/multilabel/image_mean.binaryproto"
+    mean_file: "data/nuswide/singlelabel/image_mean.binaryproto"
     mirror: true
   }
   include: { phase: TRAIN }
@@ -25,19 +25,18 @@ layers {
   top: "label"
   top: "text"
   data_param {
-    source: "data/nuswide/multilabel/val-lmdb"
+    source: "data/nuswide/singlelabel/val-lmdb"
     backend: LMDB
     batch_size: 100
-    max_labels:13
+    max_labels:1
   }
   transform_param {
     crop_size: 227
-    mean_file: "data/nuswide/multilabel/image_mean.binaryproto"
+    mean_file: "data/nuswide/singlelabel/image_mean.binaryproto"
     mirror: false
   }
   include: { phase: TEST }
 }
-
 layers {
   name: "conv1"
   type: CONVOLUTION
@@ -334,7 +333,6 @@ layers {
     }
   }
 }
-
 layers {
   name: "precisionrecall-image"
   type: PRECISION_RECALL
@@ -342,12 +340,96 @@ layers {
   bottom: "label"
   top: "precisionrecall-img"
   include: { phase: TEST }
+  pr_param: { top_k:1}
 }
 layers {
   name: "multiloss-image"
   type: SOFTMAX_MULTILABEL_LOSS
   bottom: "fc8-image"
   bottom: "label"
+  top: "loss_img"
+}
+
+layers {
+  name: "fc1-text"
+  type: INNER_PRODUCT
   bottom: "text"
-  top: "multiloss-img"
+  top: "fc1-text"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  inner_product_param {
+    num_output: 512
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+
+layers {
+  name: "relu1-text"
+  type: RELU
+  bottom: "fc1-text"
+  top: "fc1-text"
+}
+layers {
+  name: "drop1-text"
+  type: DROPOUT
+  bottom: "fc1-text"
+  top: "fc1-text"
+  dropout_param {
+    dropout_ratio: 0.5
+  }
+}
+layers {
+  name: "fc2-text"
+  type: INNER_PRODUCT
+  bottom: "fc1-text"
+  top: "fc2-text"
+  blobs_lr: 1
+  blobs_lr: 2
+  weight_decay: 1
+  weight_decay: 0
+  inner_product_param {
+    num_output: 81
+    weight_filler {
+      type: "gaussian"
+      std: 0.005
+    }
+    bias_filler {
+      type: "constant"
+      value: 0
+    }
+  }
+}
+layers {
+  name: "precisionrecall-text"
+  type: PRECISION_RECALL
+  bottom: "fc2-text"
+  bottom: "label"
+  top: "precisionrecall-text"
+  include: { phase: TEST }
+  pr_param: { top_k:1}
+}
+
+layers {
+  name: "multiloss-text"
+  type: SOFTMAX_MULTILABEL_LOSS
+  bottom: "fc2-text"
+  bottom: "label"
+  top: "loss-text"
+}
+layers {
+  name: "joint"
+  type: EUCLIDEAN_LOSS
+  bottom: "fc8-image"
+  bottom: "fc2-text"
+  top: "loss-joint"
+  loss_weight:0.01
 }

@@ -1,0 +1,19 @@
+net: "models/nuswide/singlelabel/devise_tag.prototxt"
+test_net:"models/nuswide/singlelabel/devise_tag_test.prototxt" 
+test_iter: 80
+test_iter: 80
+test_interval: 100
+test_interval: 500
+lr_policy: "fixed"
+base_lr: 0.002
+max_iter: 10000
+weight_decay: 0.0005
+display: 100
+snapshot: 20000
+snapshot_prefix: "data/nuswide/singlelabel/snapshot/devise_tag"
+solver_mode: GPU
+solver_type: ADAGRAD
+debug_info: true
+num_queries: 1000
+extract_feature_blob_names: "fc8-devise"
+extract_feature_blob_names: "text"

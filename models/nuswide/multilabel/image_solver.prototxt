@@ -1,14 +1,18 @@
-net: "models/nuswide/image_path.prototxt"
+net: "models/nuswide/multilabel/image_path.prototxt"
+test_net:"models/nuswide/multilabel/image_test.prototxt" 
+test_iter: 267
 test_iter: 267
 test_interval: 1000
+test_interval: 10000
 base_lr: 0.002
 lr_policy: "fixed"
-display: 50
+display: 100
 max_iter: 50000
 weight_decay: 0.0005
-snapshot: 10000
-snapshot_prefix: "models/nuswide/nuswide_image"
+snapshot: 20000
+snapshot_prefix: "data/nuswide/multilabel/snapshot/image-path"
 solver_type: ADAGRAD
 solver_mode: GPU
-debug_info: false
+num_queries: 2000
+debug_info: true
 extract_feature_blob_names: "fc8-image"

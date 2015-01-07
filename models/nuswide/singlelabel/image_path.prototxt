@@ -1,4 +1,4 @@
-name: "multilabel-image"
+name: "singlelabel-image"
 layers {
   name: "data"
   type: NUSWIDE_DATA
@@ -6,14 +6,14 @@ layers {
   top: "label"
   top: "text"
   data_param {
-    source: "data/nuswide/multilabel/train-lmdb"
+    source: "data/nuswide/singlelabel/train-lmdb"
     backend: LMDB
     batch_size: 32
-    max_labels:13
+    max_labels:1
   }
   transform_param {
     crop_size: 227
-    mean_file: "data/nuswide/multilabel/image_mean.binaryproto"
+    mean_file: "data/nuswide/singlelabel/image_mean.binaryproto"
     mirror: true
   }
   include: { phase: TRAIN }
@@ -25,14 +25,14 @@ layers {
   top: "label"
   top: "text"
   data_param {
-    source: "data/nuswide/multilabel/val-lmdb"
+    source: "data/nuswide/singlelabel/val-lmdb"
     backend: LMDB
     batch_size: 100
-    max_labels:13
+    max_labels:1
   }
   transform_param {
     crop_size: 227
-    mean_file: "data/nuswide/multilabel/image_mean.binaryproto"
+    mean_file: "data/nuswide/singlelabel/image_mean.binaryproto"
     mirror: false
   }
   include: { phase: TEST }
@@ -342,6 +342,7 @@ layers {
   bottom: "label"
   top: "precisionrecall-img"
   include: { phase: TEST }
+  pr_param: { top_k:1}
 }
 layers {
   name: "multiloss-image"

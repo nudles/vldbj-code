@@ -1,16 +1,16 @@
-net: "models/nuswide/multilabel/devise.prototxt"
-test_net:"models/nuswide/multilabel/devise_test.prototxt" 
+net: "models/nuswide/multilabel/devise_tag.prototxt"
+test_net:"models/nuswide/multilabel/devise_tag_test.prototxt" 
 test_iter: 267
 test_iter: 267
-test_interval: 100
 test_interval: 200
-base_lr: 0.001
+test_interval: 500
 lr_policy: "fixed"
-max_iter: 10000
+base_lr: 0.002
+max_iter: 5000
 weight_decay: 0.0005
 display: 50
 snapshot: 20000
-snapshot_prefix: "data/nuswide/multilabel/snapshot/devise"
+snapshot_prefix: "data/nuswide/multilabel/snapshot/devise_tag"
 solver_mode: GPU
 solver_type: ADAGRAD
 debug_info: true

@@ -25,7 +25,7 @@ layers {
   top: "label"
   top: "text"
   data_param {
-    source: "data/nuswide/multilabel/val-lmdb"
+    source: "data/nuswide/multilabel/test-lmdb"
     backend: LMDB
     batch_size: 100
     max_labels:13

@@ -33,17 +33,16 @@ using std::string;
 
 DEFINE_bool(gray, false,
     "When this option is on, treat images as grayscale ones");
-DEFINE_bool(shuffle, false,
-    "Randomly shuffle the order of images and their labels");
 DEFINE_string(backend, "lmdb", "The backend for storing the result");
-DEFINE_int32(resize_width, 0, "Width images are resized to");
-DEFINE_int32(resize_height, 0, "Height images are resized to");
+DEFINE_int32(resize_width, 256, "Width images are resized to");
+DEFINE_int32(resize_height, 256, "Height images are resized to");
 
 DEFINE_int32(text_dim, 100, "dimension of the text vector");
 DEFINE_int32(nlabels, 81, "select images with only popular labels");
-DEFINE_int32(max_labels, 1, "filter images with more labels than this number");
+DEFINE_int32(max_labels, 0, "filter images with more labels than this number");
 DEFINE_int32(start, 0, "filter records whose index is before this number");
 DEFINE_int32(size, 0, "num of records to insert");
+DEFINE_bool(count, false, "just count the valid records number");
 
 // num of images associated with each label, in ascending order
 int label_popularity[]={36, 19, 57, 63, 80,  6, 23, 78, 48, 65, 52, 64, 29, 10,
@@ -69,7 +68,7 @@ int main(int argc, char** argv) {
 
   std::unordered_set<int> labelset;
   for(int i=81-FLAGS_nlabels;i<81;i++)
-    labelset.insert(label_id[i]);
+    labelset.insert(label_popularity[i]);
 
   if (argc != 4) {
     gflags::ShowUsageWithFlagsRestrict(argv[0],
@@ -168,14 +167,16 @@ int main(int argc, char** argv) {
     string imgpath=strs[1];
     int k=2;
     while(strs[k]!="$$"&&k<strs.size()){
-      if(labelset.find(datum.multi_label(0))!=labelset.end())
-        datum.add_multi_label(boost::lexical_cast<int>(strs[k]));
+      int labelid=boost::lexical_cast<int>(strs[k]);
+      if(labelset.find(labelid)!=labelset.end())
+        datum.add_multi_label(labelid);
       k++;
     }
-    if(datum.multi_label_size()>FLAGS_max_labels||datum.multi_label_size()==0)
+    if((FLAGS_max_labels>0&&datum.multi_label_size()>FLAGS_max_labels)
+        ||datum.multi_label_size()==0)
       continue;
     line_id++;
-    if(line_id<FLAGS_start)
+    if(line_id<FLAGS_start||FLAGS_count)
       continue;
     CHECK_LT(k, strs.size());
     k++;

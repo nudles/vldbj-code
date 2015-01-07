@@ -1,4 +1,4 @@
-name: "nuswide-joint"
+name: "multilabel-joint"
 layers {
   name: "data"
   type: NUSWIDE_DATA
@@ -6,14 +6,14 @@ layers {
   top: "label"
   top: "text"
   data_param {
-    source: "models/nuswide/nuswide_train_lmdb"
+    source: "data/nuswide/multilabel/train-lmdb"
     backend: LMDB
     batch_size: 32
     max_labels:13
   }
   transform_param {
     crop_size: 227
-    mean_file: "models/nuswide/nuswide_mean.binaryproto"
+    mean_file: "data/nuswide/multilabel/image_mean.binaryproto"
     mirror: true
   }
   include: { phase: TRAIN }
@@ -25,15 +25,14 @@ layers {
   top: "label"
   top: "text"
   data_param {
-    source: "models/nuswide/nuswide_test_lmdb"
+    source: "data/nuswide/multilabel/val-lmdb"
     backend: LMDB
     batch_size: 100
-    skip: 99
     max_labels:13
   }
   transform_param {
     crop_size: 227
-    mean_file: "models/nuswide/nuswide_mean.binaryproto"
+    mean_file: "data/nuswide/multilabel/image_mean.binaryproto"
     mirror: false
   }
   include: { phase: TEST }
@@ -333,7 +332,6 @@ layers {
       value: 0
     }
   }
-  loss_weight:0
 }
 layers {
   name: "precisionrecall-image"
@@ -349,7 +347,6 @@ layers {
   bottom: "fc8-image"
   bottom: "label"
   top: "loss_img"
-  top: "multiloss-img"
 }
 
 layers {
@@ -425,15 +422,12 @@ layers {
   bottom: "fc2-text"
   bottom: "label"
   top: "loss-text"
-  top: "multiloss-text"
 }
 layers {
   name: "joint"
-  type: WEIGHTED_EUCLIDEAN_LOSS
+  type: EUCLIDEAN_LOSS
   bottom: "fc8-image"
   bottom: "fc2-text"
-  bottom: "multiloss-img"
-  bottom: "multiloss-text"
   top: "loss-joint"
   loss_weight:0.01
 }

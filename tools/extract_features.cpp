@@ -1,6 +1,7 @@
 #include <stdio.h>  // for snprintf
 #include <string>
 #include <vector>
+#include <stdio.h>
 
 #include "boost/algorithm/string.hpp"
 #include "google/protobuf/text_format.h"
@@ -35,7 +36,7 @@ int feature_extraction_pipeline(int argc, char** argv) {
     "Usage: extract_features  pretrained_net_param"
     "  feature_extraction_proto_file  extract_feature_blob_name1[,name2,...]"
     "  save_feature_leveldb_name1[,name2,...]  num_mini_batches  [CPU/GPU]"
-    "  [DEVICE_ID=0]\n"
+    "  [DEVICE_ID=0] phase [Test/Train]\n"
     "Note: you can extract multiple features in one pass by specifying"
     " multiple feature blob names and leveldb names seperated by ','."
     " The names cannot contain white space characters and the number of blobs"
@@ -59,7 +60,10 @@ int feature_extraction_pipeline(int argc, char** argv) {
     LOG(ERROR) << "Using CPU";
     Caffe::set_mode(Caffe::CPU);
   }
-  Caffe::set_phase(Caffe::TEST);
+  if (argc>arg_pos+1 && strcmp(argv[arg_pos+1], "Train")==0)
+    Caffe::set_phase(Caffe::TRAIN);
+  else 
+    Caffe::set_phase(Caffe::TEST);
 
   arg_pos = 0;  // the name of the executable
   string pretrained_binary_proto(argv[++arg_pos]);
@@ -114,31 +118,17 @@ int feature_extraction_pipeline(int argc, char** argv) {
         << " in the network " << feature_extraction_proto;
   }
 
-  leveldb::Options options;
-  options.error_if_exists = true;
-  options.create_if_missing = true;
-  options.write_buffer_size = 268435456;
-  vector<shared_ptr<leveldb::DB> > feature_dbs;
+  vector<FILE*> fout;
   for (size_t i = 0; i < num_features; ++i) {
     LOG(INFO)<< "Opening leveldb " << leveldb_names[i];
-    leveldb::DB* db;
-    leveldb::Status status = leveldb::DB::Open(options,
-                                               leveldb_names[i].c_str(),
-                                               &db);
-    CHECK(status.ok()) << "Failed to open leveldb " << leveldb_names[i];
-    feature_dbs.push_back(shared_ptr<leveldb::DB>(db));
+    FILE* out=fopen(leveldb_names[i].c_str(), "w");
+    fout.push_back(out);
   }
 
   int num_mini_batches = atoi(argv[++arg_pos]);
 
   LOG(ERROR)<< "Extacting Features";
 
-  Datum datum;
-  vector<shared_ptr<leveldb::WriteBatch> > feature_batches(
-      num_features,
-      shared_ptr<leveldb::WriteBatch>(new leveldb::WriteBatch()));
-  const int kMaxKeyStrLength = 100;
-  char key_str[kMaxKeyStrLength];
   vector<Blob<float>*> input_vec;
   vector<int> image_indices(num_features, 0);
   for (int batch_index = 0; batch_index < num_mini_batches; ++batch_index) {
@@ -150,27 +140,18 @@ int feature_extraction_pipeline(int argc, char** argv) {
       int dim_features = feature_blob->count() / batch_size;
       Dtype* feature_blob_data;
       for (int n = 0; n < batch_size; ++n) {
-        datum.set_height(dim_features);
-        datum.set_width(1);
-        datum.set_channels(1);
-        datum.clear_data();
-        datum.clear_float_data();
         feature_blob_data = feature_blob->mutable_cpu_data() +
             feature_blob->offset(n);
         for (int d = 0; d < dim_features; ++d) {
-          datum.add_float_data(feature_blob_data[d]);
+          fprintf(fout[i], "%f ", feature_blob_data[d]);
         }
+        fprintf(fout[i], "\n");
         string value;
-        datum.SerializeToString(&value);
-        snprintf(key_str, kMaxKeyStrLength, "%d", image_indices[i]);
-        feature_batches[i]->Put(string(key_str), value);
         ++image_indices[i];
         if (image_indices[i] % 1000 == 0) {
-          feature_dbs[i]->Write(leveldb::WriteOptions(),
-                                feature_batches[i].get());
           LOG(ERROR)<< "Extracted features of " << image_indices[i] <<
               " query images for feature blob " << blob_names[i];
-          feature_batches[i].reset(new leveldb::WriteBatch());
+          fflush(fout[i]);
         }
       }  // for (int n = 0; n < batch_size; ++n)
     }  // for (int i = 0; i < num_features; ++i)
@@ -178,7 +159,8 @@ int feature_extraction_pipeline(int argc, char** argv) {
   // write the last batch
   for (int i = 0; i < num_features; ++i) {
     if (image_indices[i] % 1000 != 0) {
-      feature_dbs[i]->Write(leveldb::WriteOptions(), feature_batches[i].get());
+      fflush(fout[i]);
+      fclose(fout[i]);
     }
     LOG(ERROR)<< "Extracted features of " << image_indices[i] <<
         " query images for feature blob " << blob_names[i];

@@ -28,8 +28,7 @@ DEFINE_string(weights, "",
     "Optional; the pretrained weights to initialize finetuning. "
     "Cannot be set simultaneously with snapshot.");
 DEFINE_string(weights2, "",
-    "Optional; the pretrained weights to initialize finetuning. "
-    "Cannot be set simultaneously with snapshot.");
+    "Optional; the pretrained weights for additional path, e.g., text path");
 DEFINE_int32(iterations, 50,
     "The number of iterations to run.");
 

@@ -1,4 +1,4 @@
-name: "multilabel-image"
+name: "multilabel-devise"
 layers {
   name: "data"
   type: NUSWIDE_DATA
@@ -8,7 +8,7 @@ layers {
   data_param {
     source: "data/nuswide/multilabel/train-lmdb"
     backend: LMDB
-    batch_size: 32
+    batch_size: 64
     max_labels:13
   }
   transform_param {
@@ -25,7 +25,7 @@ layers {
   top: "label"
   top: "text"
   data_param {
-    source: "data/nuswide/multilabel/val-lmdb"
+    source: "data/nuswide/multilabel/test-lmdb"
     backend: LMDB
     batch_size: 100
     max_labels:13
@@ -37,14 +37,13 @@ layers {
   }
   include: { phase: TEST }
 }
-
 layers {
   name: "conv1"
   type: CONVOLUTION
   bottom: "data"
   top: "conv1"
-  blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 0
+  blobs_lr: 0
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -94,8 +93,8 @@ layers {
   type: CONVOLUTION
   bottom: "norm1"
   top: "conv2"
-  blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 0
+  blobs_lr: 0
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -146,8 +145,8 @@ layers {
   type: CONVOLUTION
   bottom: "norm2"
   top: "conv3"
-  blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 0
+  blobs_lr: 0
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -175,8 +174,8 @@ layers {
   type: CONVOLUTION
   bottom: "conv3"
   top: "conv4"
-  blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 0
+  blobs_lr: 0
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -205,8 +204,8 @@ layers {
   type: CONVOLUTION
   bottom: "conv4"
   top: "conv5"
-  blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 0
+  blobs_lr: 0
   weight_decay: 1
   weight_decay: 0
   convolution_param {
@@ -246,8 +245,8 @@ layers {
   type: INNER_PRODUCT
   bottom: "pool5"
   top: "fc6"
-  blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 0
+  blobs_lr: 0
   weight_decay: 1
   weight_decay: 0
   inner_product_param {
@@ -282,8 +281,8 @@ layers {
   type: INNER_PRODUCT
   bottom: "fc6"
   top: "fc7"
-  blobs_lr: 1
-  blobs_lr: 2
+  blobs_lr: 0
+  blobs_lr: 0
   weight_decay: 1
   weight_decay: 0
   inner_product_param {
@@ -314,16 +313,16 @@ layers {
   }
 }
 layers {
-  name: "fc8-image"
+  name: "fc8-devise"
   type: INNER_PRODUCT
   bottom: "fc7"
-  top: "fc8-image"
+  top: "fc8-devise"
   blobs_lr: 1
   blobs_lr: 2
   weight_decay: 1
   weight_decay: 0
   inner_product_param {
-    num_output: 81
+    num_output: 100
     weight_filler {
       type: "gaussian"
       std: 0.01
@@ -334,20 +333,14 @@ layers {
     }
   }
 }
-
 layers {
-  name: "precisionrecall-image"
-  type: PRECISION_RECALL
-  bottom: "fc8-image"
-  bottom: "label"
-  top: "precisionrecall-img"
-  include: { phase: TEST }
-}
-layers {
-  name: "multiloss-image"
-  type: SOFTMAX_MULTILABEL_LOSS
-  bottom: "fc8-image"
+  name: "joint"
+  type: RANK_HINGE_LOSS
+  bottom: "fc8-devise"
   bottom: "label"
   bottom: "text"
-  top: "multiloss-img"
+  rank_hinge_param:{
+    label_dict: "data/nuswide/input/labelvec.txt"
+  }
+  top: "loss"
 }

@@ -108,7 +108,7 @@ message SolverParameter {
   repeated int32 test_iter = 3;
 
   // The number of iterations between two testing phases.
-  optional int32 test_interval = 4 [default = 0];
+  repeated int32 test_interval = 4;
   optional bool test_compute_loss = 19 [default = false];
   // If true, run an initial test pass before the first iteration,
   // ensuring memory availability and printing the starting value of the loss.
@@ -634,6 +634,8 @@ message PrecisionRecallParameter {
 
 message RankHingeParameter{
   optional float margin=1 [default=0.1];  
+  // label dictionary file, each line is : lable id word vector
+  optional string label_dict=2;
 }
 
 // Message that stores parameters used by ReLULayer

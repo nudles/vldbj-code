@@ -1,4 +1,4 @@
-name: "nuswide-devise"
+name: "multilabel-devise"
 layers {
   name: "data"
   type: NUSWIDE_DATA
@@ -6,14 +6,14 @@ layers {
   top: "label"
   top: "text"
   data_param {
-    source: "models/nuswide/nuswide_train_lmdb"
+    source: "data/nuswide/multilabel/train-lmdb"
     backend: LMDB
     batch_size: 64
     max_labels:13
   }
   transform_param {
     crop_size: 227
-    mean_file: "models/nuswide/nuswide_mean.binaryproto"
+    mean_file: "data/nuswide/multilabel/image_mean.binaryproto"
     mirror: true
   }
   include: { phase: TRAIN }
@@ -25,15 +25,14 @@ layers {
   top: "label"
   top: "text"
   data_param {
-    source: "models/nuswide/nuswide_test_lmdb"
+    source: "data/nuswide/multilabel/val-lmdb"
     backend: LMDB
     batch_size: 100
     max_labels:13
-    skip: 99
   }
   transform_param {
     crop_size: 227
-    mean_file: "models/nuswide/nuswide_mean.binaryproto"
+    mean_file: "data/nuswide/multilabel/image_mean.binaryproto"
     mirror: false
   }
   include: { phase: TEST }
@@ -338,7 +337,10 @@ layers {
   name: "joint"
   type: RANK_HINGE_LOSS
   bottom: "fc8-devise"
-  bottom: "text"
   bottom: "label"
+  bottom: "text"
+  rank_hinge_param:{
+    label_dict: "data/nuswide/input/labelvec.txt"
+  }
   top: "loss"
 }

@@ -567,6 +567,7 @@ class RankHingeLossLayer : public LossLayer<Dtype> {
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, vector<Blob<Dtype>*>* bottom);
   Dtype margin_;
+  Blob<Dtype> label_vec_;
 };
 
 

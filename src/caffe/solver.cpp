@@ -112,7 +112,8 @@ void Solver<Dtype>::InitTestNets() {
         << "test_state must be unspecified or specified once per test net.";
   }
   if (num_test_net_instances) {
-    CHECK_GT(param_.test_interval(), 0);
+    for(int i=0;i<num_test_net_instances;i++)
+      CHECK_GT(param_.test_interval(i), 0);
   }
   int test_net_id = 0;
   vector<string> sources(num_test_net_instances);
@@ -183,9 +184,11 @@ void Solver<Dtype>::Solve(const char* resume_file) {
       Snapshot();
     }
 
-    if (param_.test_interval() && iter_ % param_.test_interval() == 0
-        && (iter_ > 0 || param_.test_initialization())) {
-      TestAll();
+    for (int test_net_id = 0; test_net_id < test_nets_.size(); ++test_net_id) {
+      int test_interval=param_.test_interval(test_net_id);
+      if (test_interval>0&&iter_ % test_interval == 0
+          && (iter_ > 0 || param_.test_initialization())) 
+        Test(test_net_id);
     }
 
     const bool display = param_.display() && iter_ % param_.display() == 0;
@@ -231,8 +234,10 @@ void Solver<Dtype>::Solve(const char* resume_file) {
     net_->Forward(bottom_vec, &loss);
     LOG(INFO) << "Iteration " << iter_ << ", loss = " << loss;
   }
-  if (param_.test_interval() && iter_ % param_.test_interval() == 0) {
-    TestAll();
+  for (int test_net_id = 0; test_net_id < test_nets_.size(); ++test_net_id) {
+    int test_interval=param_.test_interval(test_net_id);
+    if (test_interval>0&&iter_ % test_interval == 0)
+      Test(test_net_id);
   }
   LOG(INFO) << "Optimization Done.";
 }
@@ -244,7 +249,6 @@ void Solver<Dtype>::TestAll() {
     Test(test_net_id);
   }
 }
-
 
 template <typename Dtype>
 void Solver<Dtype>::Test(const int test_net_id) {
@@ -260,11 +264,11 @@ void Solver<Dtype>::Test(const int test_net_id) {
   const shared_ptr<Net<Dtype> >& test_net = test_nets_[test_net_id];
   Dtype loss = 0;
   shared_ptr<Blob<Dtype> > label_blob=test_net->blob_by_name("label");
-  vector<shared_ptr<Blob<Dtype> > > blobs;
+  vector<shared_ptr<Blob<Dtype> > > feature_blobs;
   for(int i=0;i<extract_feature_blob_names_.size();i++)
-    blobs.push_back(test_net->blob_by_name(extract_feature_blob_names_[i]));
+    feature_blobs.push_back(test_net->blob_by_name(extract_feature_blob_names_[i]));
   Blob<Dtype> ir_label;
-  vector<Blob<Dtype> > ir_dbs(blobs.size());
+  vector<Blob<Dtype> > ir_dbs(feature_blobs.size());
 
   DLOG(INFO)<<"Forward test net to extract features from blobs";
   for (int i = 0; i < param_.test_iter(test_net_id); ++i) {
@@ -283,8 +287,8 @@ void Solver<Dtype>::Test(const int test_net_id) {
         }
       }
       for(int i=0;i<ir_dbs.size();i++)
-        ir_dbs[i].Reshape(param_.test_iter(test_net_id)*blobs[i]->num(),
-            blobs[i]->channels(), 1,1);
+        ir_dbs[i].Reshape(param_.test_iter(test_net_id)*feature_blobs[i]->num(),
+            feature_blobs[i]->channels(), 1,1);
       ir_label.Reshape(param_.test_iter(test_net_id)*label_blob->num(), 
           label_blob->channels(),1,1);
     } else {
@@ -299,11 +303,11 @@ void Solver<Dtype>::Test(const int test_net_id) {
     caffe_copy(label_blob->count(), label_blob->gpu_data(), 
         ir_label.mutable_gpu_data()+i*label_blob->count());
     for(int k=0;k<extract_feature_blob_names_.size();k++){
-      caffe_copy(blobs[k]->count(), blobs[k]->gpu_data(),
-          ir_dbs[k].mutable_gpu_data()+i*blobs[k]->count());
+      caffe_copy(feature_blobs[k]->count(), feature_blobs[k]->gpu_data(),
+          ir_dbs[k].mutable_gpu_data()+i*feature_blobs[k]->count());
     }
   }
-  LOG(INFO)<<"Start retrieval using "<<num_queries_<< "queries";
+  LOG(INFO)<<"Start retrieval using "<<num_queries_<< " queries";
   int num_points=ir_label.num();
   int label_dim=ir_label.channels();
   searcher_->SetupGroundTruth(num_queries_, num_points, 

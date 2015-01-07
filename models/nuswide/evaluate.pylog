@@ -1,0 +1,14 @@
+2014-12-26 14:19:57,595 - root - INFO - cross modal search based on hamming distance ../../data/nuswide/singlelabel/test/hammingdist-image-text-16.dat
+2014-12-26 14:21:20,625 - root - INFO - cross modal search based on hamming distance ../../data/nuswide/singlelabel/test/hammingdist-image-text-16.dat
+2014-12-26 14:21:46,834 - root - INFO - cross modal search based on hamming distance ../../data/nuswide/singlelabel/test/hammingdist-image-text-16.dat
+2014-12-26 14:24:01,725 - root - INFO - cross modal search based on hamming distance ../../data/nuswide/singlelabel/test/hammingdist-image-text-16.dat
+2014-12-26 14:24:39,629 - root - INFO - cross modal search based on hamming distance ../../data/nuswide/singlelabel/test/hammingdist-image-text-16.dat
+2014-12-26 14:24:48,897 - root - INFO - cross modal search based on hamming distance ../../data/nuswide/singlelabel/test/hammingdist-image-text-16.dat
+2014-12-26 14:25:21,340 - root - INFO - cross modal search based on hamming distance ../../data/nuswide/singlelabel/test/hammingdist-image-text-16.dat
+2014-12-26 15:07:55,282 - root - INFO - cross modal search based on hamming distance ../../data/nuswide/singlelabel/test/hammingdist-image-text-16.dat
+2014-12-26 15:09:41,560 - root - INFO - MAPs are: img_img-0.475513text_text-0.337351img_text-0.363824text_img-0.388474
+2014-12-26 15:22:25,996 - root - INFO - cross modal search based on hamming distance ../../data/nuswide/singlelabel/test/hammingdist-image-text-24.dat
+2014-12-26 15:24:09,030 - root - INFO - MAPs are: img_img-0.453291text_text-0.319205img_text-0.337556text_img-0.377330
+2014-12-26 15:27:01,124 - root - INFO - cross modal search based on hamming distance ../../data/nuswide/singlelabel/test/hammingdist-image-text-32.dat
+2014-12-26 15:28:44,342 - root - INFO - MAPs are: img_img-0.480004text_text-0.328965img_text-0.353047text_img-0.388369
+2014-12-26 17:03:07,863 - root - INFO - cross modal search based on hamming distance ../../data/nuswide/multilabel/test/hammingdist-image-text-32.dat

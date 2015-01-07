@@ -1,7 +1,7 @@
-net: "models/nuswide/multilabel/text_path.prototxt"
-test_net: "models/nuswide/multilabel/text_test.prototxt"
-test_iter: 267
-test_iter: 267
+net: "models/nuswide/singlelabel/text_path.prototxt"
+test_net: "models/nuswide/singlelabel/text_test.prototxt"
+test_iter: 80
+test_iter: 80
 test_interval: 1000
 test_interval: 10000
 base_lr: 0.005
@@ -10,8 +10,8 @@ display: 100
 max_iter: 40000
 weight_decay: 0.0005
 snapshot: 10000
-snapshot_prefix: "data/nuswide/multilabel/snapshot/text-path"
-num_queries: 2000
+snapshot_prefix: "data/nuswide/singlelabel/snapshot/text-path"
+num_queries: 1000
 solver_mode: GPU
 solver_type: ADAGRAD
 debug_info: true
