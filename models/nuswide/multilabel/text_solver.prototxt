@@ -14,5 +14,5 @@ snapshot_prefix: "data/nuswide/multilabel/snapshot/text-path"
 num_queries: 2000
 solver_mode: GPU
 solver_type: ADAGRAD
-debug_info: true
+debug_info: false
 extract_feature_blob_names: "fc2-text"

@@ -16,6 +16,6 @@ snapshot: 20000
 snapshot_prefix: "data/nuswide/multilabel/snapshot/joint"
 solver_mode: GPU
 num_queries: 2000
-debug_info: true
+debug_info: false
 extract_feature_blob_names: "fc8-image"
 extract_feature_blob_names: "fc2-text"

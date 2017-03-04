@@ -88,9 +88,6 @@ class Searcher{
   void SetupGroundTruth(int num_queries, int num_points,
             int label_dim, const T *label);
 
-  int query_id_size(){
-    return query_id_.size();
-  }
   int query_id(int k){
     return query_id_[k];
   }
@@ -106,7 +103,7 @@ class Searcher{
    * Create ground truth matrix, where element at position (i,j) is 1 if i-th
    * query and j-th point share at least one same label.
    */
-  T* CreateGroundTruthMatrix(const std::vector<int>& query_id, const T* label,
+  T* CreateGroundTruthMatrix(const int* query_id, const T* label,
                               int num_points, int label_dim);
   /**
    * Sum each row of a matrix.
@@ -141,7 +138,7 @@ class Searcher{
 
  protected:
   //! query ids to extrac query points from db points
-  std::vector<int> query_id_;
+  int * query_id_;
   //! num of queries
   int num_queries_;
   //! query points

@@ -2,8 +2,8 @@ net: "models/nuswide/multilabel/devise.prototxt"
 test_net:"models/nuswide/multilabel/devise_test.prototxt" 
 test_iter: 267
 test_iter: 267
-test_interval: 100
 test_interval: 200
+test_interval: 2000
 base_lr: 0.001
 lr_policy: "fixed"
 max_iter: 10000
@@ -13,7 +13,7 @@ snapshot: 20000
 snapshot_prefix: "data/nuswide/multilabel/snapshot/devise"
 solver_mode: GPU
 solver_type: ADAGRAD
-debug_info: true
+debug_info: false
 num_queries: 2000
 extract_feature_blob_names: "fc8-devise"
 extract_feature_blob_names: "text"

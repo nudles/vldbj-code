@@ -10,13 +10,13 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/unordered_set.hpp>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <leveldb/db.h>
 #include <leveldb/write_batch.h>
 #include <lmdb.h>
 #include <sys/stat.h>
-#include <unordered_set>
 #include <algorithm>
 #include <fstream>  // NOLINT(readability/streams)
 #include <string>
@@ -66,7 +66,7 @@ int main(int argc, char** argv) {
         "    http://www.image-net.org/download-images\n");
   gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-  std::unordered_set<int> labelset;
+  boost::unordered_set<int> labelset;
   for(int i=81-FLAGS_nlabels;i<81;i++)
     labelset.insert(label_popularity[i]);
 

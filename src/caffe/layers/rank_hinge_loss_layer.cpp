@@ -20,7 +20,7 @@ void RankHingeLossLayer<Dtype>::LayerSetUp(
   margin_ = this->layer_param_.rank_hinge_param().margin();
   if(this->layer_param_.rank_hinge_param().has_label_dict()){
     string label_dict_fname=this->layer_param_.rank_hinge_param().label_dict();
-    std::ifstream fin(this->layer_param_.rank_hinge_param().label_dict());
+    std::ifstream fin(label_dict_fname.c_str(), std::ifstream::in);
     std::vector<string> lines;
     while(!fin.eof()){
       string line;

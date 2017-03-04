@@ -2,66 +2,64 @@
 #include <iostream>
 #include <functional>
 #include <algorithm>
-#include <chrono>
-#include <random>
 #include "caffe/evaluator.hpp"
+#include "caffe/util/math_functions.hpp"
 
 namespace evaluator {
 template<typename T>
 Searcher<T>::~Searcher(){
-  if(query_!=nullptr)
+  if(query_!=NULL)
     delete query_;
-  if(sim_!=nullptr)
+  if(sim_!=NULL)
     delete sim_;
-  if(gndmat_!=nullptr)
+  if(gndmat_!=NULL)
     delete gndmat_;
-  if(num_relevant_!=nullptr)
+  if(num_relevant_!=NULL)
     delete num_relevant_;
 }
 
 template<typename T>
 Searcher<T>::Searcher(){
   point_dim_=num_points_=num_queries_=0;
-  query_=nullptr;
-  sim_=nullptr;
-  gndmat_=nullptr;
-  num_relevant_=nullptr;
+  query_id_=NULL;
+  query_=NULL;
+  sim_=NULL;
+  gndmat_=NULL;
+  num_relevant_=NULL;
 }
 
 template<typename T>
 Searcher<T>::Searcher(int num_queries, int num_points, int label_dim, 
     const T* label){
   assert(num_queries<num_points);
-  query_=nullptr;
-  sim_=nullptr;
-  gndmat_=nullptr;
-  num_relevant_=nullptr;
+  query_=NULL;
+  sim_=NULL;
+  gndmat_=NULL;
+  num_relevant_=NULL;
   SetupGroundTruth(num_queries, num_points, label_dim, label);
 }
 
 template<typename T>
 void Searcher<T>::GenQueryIDs(int num_queries, int num_points){
-  unsigned seed1 = std::chrono::system_clock::now().time_since_epoch().count();
-  std::mt19937 gen(seed1);
-  std::uniform_int_distribution<int> distribution(0,num_points-1);
+  if(query_id_!=NULL)
+    delete query_id_;
+  query_id_= new int[num_queries];
+  caffe::caffe_rng_int_uniform(num_queries, 0, num_points-1, query_id_);
   num_queries_=num_queries;
-  query_id_.clear();
-  for(int i=0;i<num_queries_;i++)
-    query_id_.push_back(distribution(gen));
 }
 
 template<typename T>
 void Searcher<T>::SetupGroundTruth(int num_queries, int num_points,
     int label_dim, const T *label){
-  num_queries_=num_queries;
   num_points_=num_points;
-  if(query_id_.size()!=num_queries_){
+  if(num_queries_!=num_queries_){
     GenQueryIDs(num_queries, num_points);
   }
-  if(gndmat_!=nullptr)
+  num_queries_=num_queries;
+  if(gndmat_!=NULL)
     delete gndmat_;
   gndmat_=CreateGroundTruthMatrix(query_id_, label, num_points_, label_dim);
-  if(num_relevant_!=nullptr)
+  if(num_relevant_!=NULL)
     delete num_relevant_;
   num_relevant_=SumRow(gndmat_, num_queries_, num_points_);
 }
@@ -69,12 +67,12 @@ void Searcher<T>::SetupGroundTruth(int num_queries, int num_points,
  * label is of shape num_pointer x label_dim, value starts from 0
  */
 template<typename T>
-T* Searcher<T>::CreateGroundTruthMatrix(const std::vector<int>& query_id,
+T* Searcher<T>::CreateGroundTruthMatrix(const int* query_id,
                                         const T* label,
                                         int num_points,
                                         int label_dim){
   // generate ground truth matrix
-  int num_queries=query_id.size();
+  int num_queries=num_queries_;
   int maxlabelidx=myblas_iamax(label_dim*num_points, label, 1);
   // binary label
   int blabel_dim=label[maxlabelidx]+1;
@@ -128,9 +126,9 @@ T* Searcher<T>::SumRow(const T* mat, int nrow, int ncol){
 template<typename T>
 const T* Searcher<T>::Search(const T* db, int point_dim, Metric metric){
   point_dim_=point_dim;
-  if(query_==nullptr)
+  if(query_==NULL)
     query_=new T[num_queries_*point_dim_];
-  if(sim_==nullptr)
+  if(sim_==NULL)
     sim_=new T[num_queries_*num_points_];
   // prepare query points
   for(int i=0;i<num_queries_;i++){
@@ -168,31 +166,31 @@ const T* Searcher<T>::Search(const T* db, int num_points, int point_dim,
     int num_queries, const T* label, int label_dim, Metric metric){
   if(point_dim!=point_dim_||num_queries!=num_queries_){
     point_dim_=point_dim;
-    if(query_!=nullptr){
+    if(query_!=NULL){
       delete query_;
-      query_=nullptr;
+      query_=NULL;
     }
   }
   if(num_queries!=num_queries_||num_points!=num_points_){
-    if(sim_!=nullptr){
+    if(sim_!=NULL){
       delete sim_;
-      sim_=nullptr;
+      sim_=NULL;
     }
     num_queries_=num_queries;
     num_points_=num_points;
   }
-  if(label!=nullptr)
+  if(label!=NULL)
     SetupGroundTruth(num_queries, num_points, label_dim, label);
   return Search(db, point_dim,  metric);
 }
 
 template<typename T>
 float Searcher<T>::GetMAP(const T* simmat, int topk) {
-  assert(gndmat_!=nullptr);
-  assert(num_relevant_!=nullptr);
+  assert(gndmat_!=NULL);
+  assert(num_relevant_!=NULL);
   const T* mat;
-  if(simmat==nullptr){
-    CHECK(sim_!= nullptr);
+  if(simmat==NULL){
+    CHECK(sim_!= NULL);
     mat=sim_;
   }
   else 
@@ -201,7 +199,7 @@ float Searcher<T>::GetMAP(const T* simmat, int topk) {
   float map=0.0f;
   if(topk==0)
     topk=num_points_;
-  for(size_t i=0;i<query_id_.size();i++){
+  for(size_t i=0;i<num_queries_;i++){
     std::vector<std::pair<T, int> > sim;
     for(int j=0;j<num_points_;j++)
       sim.push_back(std::make_pair(mat[i*num_points_+j], j));
@@ -220,7 +218,7 @@ float Searcher<T>::GetMAP(const T* simmat, int topk) {
     CHECK_LE(hits,num_relevant_[i]);
     map+=score/std::min(topk*1.0f, static_cast<float>(num_relevant_[i]));
   }
-  return map/query_id_.size();
+  return map/num_queries_;
 }
 template<>
 void Searcher<float>::myblas_gemm(const enum CBLAS_ORDER Order,

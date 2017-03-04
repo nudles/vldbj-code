@@ -68,6 +68,8 @@ void WriteProtoToBinaryFile(const Message& proto, const char* filename) {
 /*
 bool ReadImageToNuswideDatum(const string& filename, const int height,
     const int width, const bool is_color, NuswideDatum* datum) {
+  return true;
+}
   cv::Mat cv_img;
   int cv_read_flag = (is_color ? CV_LOAD_IMAGE_COLOR :
     CV_LOAD_IMAGE_GRAYSCALE);
@@ -109,9 +111,8 @@ bool ReadImageToNuswideDatum(const string& filename, const int height,
   }
   return true;
 }
+
 */
-
-
 bool ReadImageToDatum(const string& filename, const int label,
     const int height, const int width, const bool is_color, Datum* datum) {
   cv::Mat cv_img;

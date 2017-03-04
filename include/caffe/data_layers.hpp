@@ -336,7 +336,6 @@ class MemoryDataLayer : public BaseDataLayer<Dtype> {
  *        by a window data file.
  *
  * TODO(dox): thorough documentation for Forward and proto params.
- */
 template <typename Dtype>
 class WindowDataLayer : public BasePrefetchingDataLayer<Dtype> {
  public:
@@ -362,6 +361,7 @@ class WindowDataLayer : public BasePrefetchingDataLayer<Dtype> {
   vector<vector<float> > fg_windows_;
   vector<vector<float> > bg_windows_;
 };
+ */
 
 }  // namespace caffe
 

@@ -570,7 +570,6 @@ class RankHingeLossLayer : public LossLayer<Dtype> {
   Blob<Dtype> label_vec_;
 };
 
-
 /**
  * @brief A generalization of MultinomialLogisticLossLayer that takes an
  *        "information gain" (infogain) matrix specifying the "value" of all label
